@@ -1,0 +1,19 @@
+{
+  "scenario_id": "SCENARIO_A",
+  "title": "Routine Payroll Payment",
+  "description": "Routine monthly employee payment to a known account seen monthly since March 2024. Low exposure, clears cheaply on 2 cost units.",
+  "expected_verdict": "APPROVE",
+  "expected_units": 2,
+  "request": {
+    "event_type": "payroll_transfer",
+    "amount": { "value": 42000, "currency": "DZD" },
+    "counterparty": {
+      "msisdn": "+213550112233",
+      "declared_name": "Karim Bouzid",
+      "declared_location": { "label": "Algiers", "cell": "16-ALG" }
+    },
+    "channel": "api",
+    "idempotency_key": "pay_2026_09_001"
+  },
+  "business_binding_id": "bb_algeria_fintech_01"
+}

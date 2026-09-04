@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { background: #f4f1e9; -webkit-font-smoothing: antialiased; }
+  a { color: #b23a2a; text-decoration: none; }
+  a:hover { color: #8d2c1f; }
+  input[type="range"] { -webkit-appearance: none; appearance: none; background: transparent; }
+  input[type="range"]::-webkit-slider-runnable-track { height: 3px; background: rgba(232,228,216,0.22); }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; margin-top: -6px; border-radius: 50%; background: #e8e4d8; border: 3px solid #b23a2a; cursor: pointer; }
+  @keyframes trust-stamp { 0% { opacity: 0; transform: scale(2.3) rotate(-11deg); } 52% { opacity: 1; transform: scale(0.9) rotate(-2deg); } 70% { transform: scale(1.05) rotate(-3deg); } 86% { transform: scale(0.99) rotate(-2deg); } 100% { opacity: 1; transform: scale(1) rotate(-2.2deg); } }
+  @keyframes trust-shock { 0% { opacity: 0.5; transform: scale(0.35); } 100% { opacity: 0; transform: scale(2.1); } }
+  @keyframes trust-caret { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+  @keyframes trust-dot { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+</style>
+</helmet>
+<div ref="{{ rootRef }}" style="background-color: #f4f1e9; background-image: repeating-linear-gradient(0deg, rgba(30,25,15,0.05) 0 1px, transparent 1px 27px), repeating-linear-gradient(90deg, rgba(30,25,15,0.04) 0 1px, transparent 1px 27px); color: #1c1a14; font-family: Archivo, Helvetica, sans-serif; min-height: 100vh; overflow-x: hidden; position: relative;">
+
+  <canvas ref="{{ waveRef }}" style="position: fixed; top: 0; left: 0; height: 100vh; width: clamp(0px, calc(7.5vw - 22px), 66px); z-index: 5; pointer-events: none;"></canvas>
+
+  <div style="max-width: 1240px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 48px) 0 clamp(20px, calc(9vw - 18px), 96px); box-sizing: border-box;">
+
+    <header data-wave="calm" style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 26px 0 0;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; letter-spacing: 0.42em;">TRUST</div>
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: rgba(28,26,20,0.45); border: 1px solid rgba(28,26,20,0.16); padding: 5px 9px; border-radius: 2px;">HACKATHON BUILD · SEPT 2026</div>
+    </header>
+
+    <section data-wave="calm" data-screen-label="Hero" style="padding: clamp(38px, 7vw, 88px) 0 0;">
+      <h1 style="font-family: 'Bricolage Grotesque', Helvetica, sans-serif; font-weight: 800; font-size: clamp(40px, 7.4vw, 106px); line-height: 0.94; letter-spacing: -0.035em; margin: 0; max-width: 15ch; text-wrap: balance;">{{ headline }}</h1>
+      <p style="font-family: Archivo, sans-serif; font-size: clamp(16px, 1.5vw, 20px); line-height: 1.5; color: rgba(28,26,20,0.66); max-width: 54ch; margin: 22px 0 0; text-wrap: pretty;">TRUST asks the network the person is standing on — the SIM, the device binding, the port-out log — then spends only as much of its budget as the risk actually deserves.</p>
+
+      <div style="margin: clamp(30px, 4vw, 46px) 0 0; background: #17150f; border: 1px solid rgba(28,26,20,0.9); border-radius: 4px; box-shadow: 14px 14px 0 rgba(28,26,20,0.1); overflow: hidden;">
+
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-bottom: 1px solid rgba(232,228,216,0.14);">
+          <div style="display: flex; align-items: center; gap: 9px; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.18em; color: rgba(232,228,216,0.55);">
+            <span style="width: 7px; height: 7px; border-radius: 50%; background: {{ statusColor }}; animation: trust-dot 1.4s ease-in-out infinite;"></span>
+            <span>AGENT · SANDBOX · {{ statusLabel }}</span>
+          </div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.18em; color: rgba(232,228,216,0.3);">v1/verify</div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; align-items: stretch;">
+
+          <div style="flex: 1 1 290px; min-width: 260px; padding: 20px; border-right: 1px solid rgba(232,228,216,0.14); box-sizing: border-box;">
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: rgba(232,228,216,0.4);">TRANSACTION</div>
+
+            <div style="margin-top: 18px;">
+              <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: rgba(232,228,216,0.5);">amount</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 17px; font-weight: 600; color: #e8e4d8;">{{ amountLabel }} <span style="font-size: 11px; color: rgba(232,228,216,0.45);">DZD</span></span>
+              </div>
+              <input type="range" min="800" max="240000" step="200" value="{{ amount }}" onChange="{{ onAmount }}" style="width: 100%; margin: 14px 0 0; height: 15px;" />
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 9px; margin-top: 22px;">
+              <button onClick="{{ toggleCp }}" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; text-align: left; cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 11px 12px; border-radius: 3px; border: 1px solid {{ cpBorder }}; background: {{ cpBg }}; color: {{ cpFg }};" style-hover="border-color: rgba(232,228,216,0.5);">
+                <span>counterparty.is_new</span>
+                <span style="font-weight: 600;">{{ cpValue }}</span>
+              </button>
+              <button onClick="{{ toggleGeo }}" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; text-align: left; cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 11px 12px; border-radius: 3px; border: 1px solid {{ geoBorder }}; background: {{ geoBg }}; color: {{ geoFg }};" style-hover="border-color: rgba(232,228,216,0.5);">
+                <span>session.geo_match</span>
+                <span style="font-weight: 600;">{{ geoValue }}</span>
+              </button>
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-top: 22px; flex-wrap: wrap;">
+              <button onClick="{{ runSim }}" style="flex: 1 1 110px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; padding: 13px 14px; border-radius: 3px; border: none; background: #e8e4d8; color: #17150f;" style-hover="background: #ffffff;">{{ runLabel }}</button>
+              <button onClick="{{ makeSuspicious }}" style="flex: 1 1 130px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; padding: 13px 14px; border-radius: 3px; border: 1px solid #b23a2a; background: rgba(178,58,42,0.14); color: #e8877a;" style-hover="background: rgba(178,58,42,0.3); color: #ffffff;">MAKE IT SUSPICIOUS</button>
+            </div>
+
+            <p style="font-family: Archivo, sans-serif; font-size: 12px; line-height: 1.5; color: rgba(232,228,216,0.35); margin: 16px 0 0; text-wrap: pretty;">Scripted sandbox trace. Same decision path, same budget maths, no live carrier calls.</p>
+          </div>
+
+          <div style="flex: 1 1 400px; min-width: 300px; display: flex; flex-direction: column;">
+
+            <div style="padding: 16px 20px 14px; border-bottom: 1px solid rgba(232,228,216,0.14);">
+              <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: rgba(232,228,216,0.4);">COST METER</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.14em; color: rgba(232,228,216,0.4);">BUDGET {{ budget }}</span>
+              </div>
+              <div style="position: relative; margin-top: 12px;">
+                <div style="display: flex; gap: 3px; align-items: flex-end; height: 26px;">
+                  <sc-for list="{{ ticks }}" as="tk" hint-placeholder-count="12">
+                    <div style="flex: 1 1 0; height: {{ tk.h }}; border-radius: 1px; background: {{ tk.bg }};"></div>
+                  </sc-for>
+                </div>
+                <div style="position: absolute; top: -4px; left: {{ needleLeft }}; width: 2px; height: 34px; background: #e8e4d8; transition: left 0.22s cubic-bezier(0.3,0.9,0.3,1);"></div>
+              </div>
+              <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 10px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 600; color: #e8e4d8; line-height: 1;">{{ unitsLabel }}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.16em; color: rgba(232,228,216,0.4);">UNITS SPENT</span>
+              </div>
+            </div>
+
+            <div style="padding: 16px 20px; min-height: 268px; flex: 1 1 auto;">
+              <sc-for list="{{ simLines }}" as="ln" hint-placeholder-count="4">
+                <div style="display: flex; gap: 10px; align-items: flex-start; padding: 3px 0;">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; font-weight: 600; letter-spacing: 0.14em; padding: 3px 0; border-radius: 2px; flex: 0 0 66px; text-align: center; background: {{ ln.bg }}; color: {{ ln.fg }};">{{ ln.kind }}</span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; line-height: 1.6; color: {{ ln.color }}; overflow-wrap: anywhere;">{{ ln.text }}<span style="display: {{ ln.caret }}; width: 7px; height: 13px; background: #b23a2a; vertical-align: -2px; margin-left: 2px; animation: trust-caret 0.9s step-end infinite;"></span></span>
+                </div>
+              </sc-for>
+              <sc-if value="{{ simIdle }}" hint-placeholder-val="{{ false }}">
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; line-height: 1.6; color: rgba(232,228,216,0.32);">// awaiting transaction. drag the amount, flip a flag, hit run.</div>
+              </sc-if>
+            </div>
+
+            <sc-if value="{{ simVerdict }}" hint-placeholder-val="{{ false }}">
+              <div style="border-top: 1px solid rgba(232,228,216,0.14); padding: 18px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                <div style="position: relative; display: inline-flex;">
+                  <span style="position: absolute; inset: -6px; border-radius: 4px; border: 2px solid {{ verdictColor }}; animation: trust-shock 0.55s ease-out both;"></span>
+                  <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 27px; letter-spacing: -0.01em; padding: 8px 18px; border: 3px solid {{ verdictColor }}; color: {{ verdictColor }}; border-radius: 3px; animation: trust-stamp 0.5s cubic-bezier(0.2,1.3,0.4,1) both;">{{ simVerdict }}</span>
+                </div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; line-height: 1.6; color: rgba(232,228,216,0.6); flex: 1 1 200px; overflow-wrap: anywhere;">{{ verdictNote }}</div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section data-wave="watch" data-screen-label="Stat" style="padding: clamp(72px, 11vw, 150px) 0 clamp(60px, 9vw, 120px);">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.24em; color: rgba(28,26,20,0.42); margin-bottom: 26px;">THE ASYMMETRY EVERY CHECKLIST IGNORES</div>
+      <p style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: clamp(26px, 3.9vw, 56px); line-height: 1.1; letter-spacing: -0.025em; margin: 0; max-width: 26ch; text-wrap: pretty;">A fixed rule set costs the same to guard <span style="font-family: 'IBM Plex Mono', monospace; font-weight: 500; font-size: 0.82em;">2,000 DZD</span> and <span style="font-family: 'IBM Plex Mono', monospace; font-weight: 500; font-size: 0.82em;">200,000 DZD</span>.</p>
+      <p style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(26px, 3.9vw, 56px); line-height: 1.1; letter-spacing: -0.025em; margin: 18px 0 0; max-width: 26ch; color: #b23a2a; text-wrap: pretty;">TRUST spends 2 units on one and 7 on the other.</p>
+    </section>
+
+    <section data-wave="calm" data-screen-label="How it decides" style="padding: 0 0 clamp(70px, 10vw, 130px); border-top: 1px solid rgba(28,26,20,0.14); padding-top: clamp(46px, 6vw, 80px);">
+      <h2 style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(28px, 3.4vw, 46px); letter-spacing: -0.03em; line-height: 1.02; margin: 0 0 clamp(30px, 4vw, 54px);">How it decides.</h2>
+      <div style="display: flex; flex-direction: column; gap: clamp(28px, 4vw, 52px);">
+        <div data-reveal="1" style="opacity: 0.16; transform: translateY(18px); transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2,0.8,0.2,1); display: flex; gap: clamp(16px, 3vw, 40px); flex-wrap: wrap; border-left: 2px solid rgba(28,26,20,0.16); padding-left: clamp(16px, 2.5vw, 30px);">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.2em; color: #b23a2a; flex: 0 0 62px; padding-top: 6px;">01</div>
+          <div style="flex: 1 1 260px;">
+            <h3 style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: clamp(21px, 2.3vw, 31px); letter-spacing: -0.02em; margin: 0;">Binding</h3>
+            <p style="font-size: 16px; line-height: 1.55; color: rgba(28,26,20,0.66); margin: 8px 0 0; max-width: 46ch; text-wrap: pretty;">Before anything else: is this device still the device the number lives on? A SIM that moved 14 hours ago is not the same identity, no matter what the password says.</p>
+          </div>
+        </div>
+        <div data-reveal="2" style="opacity: 0.16; transform: translateY(18px); transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2,0.8,0.2,1); display: flex; gap: clamp(16px, 3vw, 40px); flex-wrap: wrap; border-left: 2px solid rgba(28,26,20,0.16); padding-left: clamp(16px, 2.5vw, 30px);">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.2em; color: #b23a2a; flex: 0 0 62px; padding-top: 6px;">02</div>
+          <div style="flex: 1 1 260px;">
+            <h3 style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: clamp(21px, 2.3vw, 31px); letter-spacing: -0.02em; margin: 0;">Registry</h3>
+            <p style="font-size: 16px; line-height: 1.55; color: rgba(28,26,20,0.66); margin: 8px 0 0; max-width: 46ch; text-wrap: pretty;">The other end of the transfer has a history it didn't choose: age, cluster, how many strangers paid it this week. You can rename an account. You can't rename its graph.</p>
+          </div>
+        </div>
+        <div data-reveal="3" style="opacity: 0.16; transform: translateY(18px); transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2,0.8,0.2,1); display: flex; gap: clamp(16px, 3vw, 40px); flex-wrap: wrap; border-left: 2px solid rgba(28,26,20,0.16); padding-left: clamp(16px, 2.5vw, 30px);">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.2em; color: #b23a2a; flex: 0 0 62px; padding-top: 6px;">03</div>
+          <div style="flex: 1 1 260px;">
+            <h3 style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: clamp(21px, 2.3vw, 31px); letter-spacing: -0.02em; margin: 0;">Budget</h3>
+            <p style="font-size: 16px; line-height: 1.55; color: rgba(28,26,20,0.66); margin: 8px 0 0; max-width: 46ch; text-wrap: pretty;">Every call costs units, and the agent knows what the transaction is worth. Cheap questions first. Expensive ones only when the cheap answers disagree.</p>
+          </div>
+        </div>
+        <div data-reveal="4" style="opacity: 0.16; transform: translateY(18px); transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2,0.8,0.2,1); display: flex; gap: clamp(16px, 3vw, 40px); flex-wrap: wrap; border-left: 2px solid rgba(28,26,20,0.16); padding-left: clamp(16px, 2.5vw, 30px);">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.2em; color: #b23a2a; flex: 0 0 62px; padding-top: 6px;">04</div>
+          <div style="flex: 1 1 260px;">
+            <h3 style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: clamp(21px, 2.3vw, 31px); letter-spacing: -0.02em; margin: 0;">The loop</h3>
+            <p style="font-size: 16px; line-height: 1.55; color: rgba(28,26,20,0.66); margin: 8px 0 0; max-width: 46ch; text-wrap: pretty;">Think, call, observe, think again. Not a pipeline — a loop that can change its mind halfway through and buy one more signal.</p>
+          </div>
+        </div>
+        <div data-reveal="5" style="opacity: 0.16; transform: translateY(18px); transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2,0.8,0.2,1); display: flex; gap: clamp(16px, 3vw, 40px); flex-wrap: wrap; border-left: 2px solid #b23a2a; padding-left: clamp(16px, 2.5vw, 30px);">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.2em; color: #b23a2a; flex: 0 0 62px; padding-top: 6px;">05</div>
+          <div style="flex: 1 1 260px;">
+            <h3 style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: clamp(21px, 2.3vw, 31px); letter-spacing: -0.02em; margin: 0;">Verdict</h3>
+            <p style="font-size: 16px; line-height: 1.55; color: rgba(28,26,20,0.66); margin: 8px 0 0; max-width: 46ch; text-wrap: pretty;">Approve, review, hold — with the trace attached. If you can't read why it decided, it didn't decide, it guessed.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section data-wave="alert" data-screen-label="Case files" style="padding: clamp(46px, 6vw, 80px) 0 clamp(70px, 10vw, 120px); border-top: 1px solid rgba(28,26,20,0.14);">
+      <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: clamp(24px, 3vw, 40px);">
+        <h2 style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(28px, 3.4vw, 46px); letter-spacing: -0.03em; line-height: 1.02; margin: 0;">Case files.</h2>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: rgba(28,26,20,0.45);">open one — it plays out as it happened</div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <sc-for list="{{ cases }}" as="cs" hint-placeholder-count="3">
+          <div style="border: 1px solid {{ cs.border }}; border-radius: 4px; background: {{ cs.wrapBg }}; overflow: hidden;">
+            <button onClick="{{ cs.onOpen }}" style="display: flex; align-items: center; gap: clamp(12px, 2vw, 22px); width: 100%; text-align: left; cursor: pointer; background: transparent; border: none; padding: clamp(16px, 2vw, 22px); flex-wrap: wrap;" style-hover="background: rgba(28,26,20,0.035);">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.2em; color: {{ cs.idColor }}; flex: 0 0 auto;">{{ cs.id }}</span>
+              <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: clamp(17px, 1.9vw, 25px); letter-spacing: -0.02em; color: #1c1a14; flex: 1 1 240px; line-height: 1.15;">{{ cs.title }}</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.16em; padding: 5px 9px; border-radius: 2px; border: 1px solid {{ cs.tagColor }}; color: {{ cs.tagColor }}; flex: 0 0 auto;">{{ cs.tag }}</span>
+            </button>
+            <sc-if value="{{ cs.open }}" hint-placeholder-val="{{ false }}">
+              <div style="background: #17150f; padding: clamp(16px, 2vw, 22px); border-top: 1px solid rgba(28,26,20,0.85);">
+                <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px;">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: rgba(232,228,216,0.45); flex: 1 1 200px; overflow-wrap: anywhere;">{{ cs.subject }}</span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.14em; color: rgba(232,228,216,0.45);">{{ cs.unitsLabel }} UNITS</span>
+                </div>
+                <sc-for list="{{ cs.lines }}" as="ln" hint-placeholder-count="4">
+                  <div style="display: flex; gap: 10px; align-items: flex-start; padding: 3px 0;">
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; font-weight: 600; letter-spacing: 0.14em; padding: 3px 0; border-radius: 2px; flex: 0 0 66px; text-align: center; background: {{ ln.bg }}; color: {{ ln.fg }};">{{ ln.kind }}</span>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; line-height: 1.6; color: {{ ln.color }}; overflow-wrap: anywhere;">{{ ln.text }}<span style="display: {{ ln.caret }}; width: 7px; height: 13px; background: #b23a2a; vertical-align: -2px; margin-left: 2px; animation: trust-caret 0.9s step-end infinite;"></span></span>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ cs.verdict }}" hint-placeholder-val="{{ false }}">
+                  <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(232,228,216,0.14);">
+                    <div style="position: relative; display: inline-flex;">
+                      <span style="position: absolute; inset: -6px; border-radius: 4px; border: 2px solid {{ cs.verdictColor }}; animation: trust-shock 0.55s ease-out both;"></span>
+                      <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 24px; padding: 7px 16px; border: 3px solid {{ cs.verdictColor }}; color: {{ cs.verdictColor }}; border-radius: 3px; animation: trust-stamp 0.5s cubic-bezier(0.2,1.3,0.4,1) both;">{{ cs.verdict }}</span>
+                    </div>
+                    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; line-height: 1.6; color: rgba(232,228,216,0.6); flex: 1 1 220px; overflow-wrap: anywhere;">{{ cs.note }}</div>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+
+      <p style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: clamp(19px, 2.1vw, 28px); line-height: 1.25; letter-spacing: -0.02em; margin: clamp(26px, 3vw, 40px) 0 0; max-width: 34ch; text-wrap: pretty;">No single signal here would have caught it. <span style="color: #b23a2a;">That's the point.</span></p>
+    </section>
+
+    <section data-wave="calm" data-screen-label="Three doors" style="padding: clamp(46px, 6vw, 80px) 0 clamp(70px, 10vw, 120px); border-top: 1px solid rgba(28,26,20,0.14);">
+      <h2 style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(28px, 3.4vw, 46px); letter-spacing: -0.03em; line-height: 1.02; margin: 0; max-width: 22ch;">Three doors in. Same truth out.</h2>
+      <p style="font-size: 16px; line-height: 1.55; color: rgba(28,26,20,0.62); margin: 14px 0 clamp(28px, 3.5vw, 46px); max-width: 50ch; text-wrap: pretty;">However small you are, the network doesn't grade on a curve. The depth of the trace changes; the signals don't.</p>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px;">
+        <div style="border: 1px solid rgba(28,26,20,0.18); border-radius: 4px; padding: clamp(20px, 2.4vw, 30px); background: rgba(255,255,255,0.4);">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: rgba(28,26,20,0.42);">DOOR 01</div>
+          <h3 style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: 26px; letter-spacing: -0.02em; margin: 12px 0 0;">Bank</h3>
+          <p style="font-size: 15px; line-height: 1.55; color: rgba(28,26,20,0.65); margin: 8px 0 16px; text-wrap: pretty;">Full loop, full budget, full trace in the audit file. Your reviewers stop guessing why.</p>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #1c1a14; border-top: 1px solid rgba(28,26,20,0.14); padding-top: 12px;">up to 12 units / decision</div>
+        </div>
+        <div style="border: 1px solid rgba(28,26,20,0.18); border-radius: 4px; padding: clamp(20px, 2.4vw, 30px); background: rgba(255,255,255,0.4);">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: rgba(28,26,20,0.42);">DOOR 02</div>
+          <h3 style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: 26px; letter-spacing: -0.02em; margin: 12px 0 0;">Platform</h3>
+          <p style="font-size: 15px; line-height: 1.55; color: rgba(28,26,20,0.65); margin: 8px 0 16px; text-wrap: pretty;">One call at checkout. Binding plus registry, escalation only when the numbers get interesting.</p>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #1c1a14; border-top: 1px solid rgba(28,26,20,0.14); padding-top: 12px;">2–7 units / decision</div>
+        </div>
+        <div style="border: 1px solid #1c1a14; border-radius: 4px; padding: clamp(20px, 2.4vw, 30px); background: #17150f;">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: rgba(232,228,216,0.45);">DOOR 03</div>
+          <h3 style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: 26px; letter-spacing: -0.02em; margin: 12px 0 0; color: #e8e4d8;">SME</h3>
+          <p style="font-size: 15px; line-height: 1.55; color: rgba(232,228,216,0.6); margin: 8px 0 16px; text-wrap: pretty;">A shop with a phone gets the same SIM-swap answer a bank does. That's the whole idea.</p>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #e8877a; border-top: 1px solid rgba(232,228,216,0.16); padding-top: 12px;">2 units, flat</div>
+        </div>
+      </div>
+    </section>
+
+    <section data-wave="watch" data-screen-label="Limits" style="padding: clamp(46px, 6vw, 80px) 0 clamp(70px, 10vw, 120px); border-top: 1px solid rgba(28,26,20,0.14);">
+      <h2 style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(26px, 3.1vw, 42px); letter-spacing: -0.03em; line-height: 1.06; margin: 0; max-width: 30ch; text-wrap: pretty;">A system that claims everything catches nothing.</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: clamp(24px, 4vw, 56px); margin-top: clamp(28px, 3.5vw, 48px);">
+        <div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: #2f6d51; padding-bottom: 12px; border-bottom: 1px solid rgba(28,26,20,0.16);">WE CLAIM</div>
+          <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+            <div style="font-size: 15.5px; line-height: 1.5; color: rgba(28,26,20,0.78);">Account takeover after a SIM port-out — caught in the binding step, before money moves.</div>
+            <div style="font-size: 15.5px; line-height: 1.5; color: rgba(28,26,20,0.78);">Mule accounts with no history to stand on.</div>
+            <div style="font-size: 15.5px; line-height: 1.5; color: rgba(28,26,20,0.78);">A readable reason for every hold, every time.</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: #b23a2a; padding-bottom: 12px; border-bottom: 1px solid rgba(28,26,20,0.16);">WE DON'T — YET</div>
+          <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+            <div style="font-size: 15.5px; line-height: 1.5; color: rgba(28,26,20,0.78);">A victim who is genuinely on their own device, willingly sending money to a fraudster. Nothing in the network is lying there.</div>
+            <div style="font-size: 15.5px; line-height: 1.5; color: rgba(28,26,20,0.78);">Cash-out rings that never touch a mobile identity.</div>
+            <div style="font-size: 15.5px; line-height: 1.5; color: rgba(28,26,20,0.78);">Anything at all in a market where we have no carrier peering.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section data-wave="calm" data-screen-label="Developers" style="padding: clamp(46px, 6vw, 80px) 0 clamp(70px, 10vw, 120px); border-top: 1px solid rgba(28,26,20,0.14);">
+      <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: clamp(20px, 2.5vw, 32px);">
+        <h2 style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(26px, 3.1vw, 42px); letter-spacing: -0.03em; margin: 0;">One endpoint. One verdict.</h2>
+        <button onClick="{{ copyCurl }}" style="cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.16em; padding: 11px 16px; border-radius: 3px; border: 1px solid #1c1a14; background: transparent; color: #1c1a14;" style-hover="background: #1c1a14; color: #f4f1e9;">{{ copyLabel }}</button>
+      </div>
+      <div style="background: #17150f; border-radius: 4px; padding: clamp(18px, 2.4vw, 28px); overflow-x: auto; box-shadow: 14px 14px 0 rgba(28,26,20,0.1);">
+        <pre style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; line-height: 1.75; color: #e8e4d8;"><span style="color: #e8877a;">curl</span> -X POST https://api.trust.dz/<span style="color: #d8b25a;">v1/verify</span> \
+  -H <span style="color: #8fbf9f;">"Authorization: Bearer $TRUST_KEY"</span> \
+  -H <span style="color: #8fbf9f;">"Content-Type: application/json"</span> \
+  -d <span style="color: #8fbf9f;">'{</span>
+    <span style="color: #9fb8d8;">"msisdn"</span>: <span style="color: #8fbf9f;">"+213•••••4417"</span>,
+    <span style="color: #9fb8d8;">"amount"</span>: { <span style="color: #9fb8d8;">"value"</span>: <span style="color: #d8b25a;">184000</span>, <span style="color: #9fb8d8;">"currency"</span>: <span style="color: #8fbf9f;">"DZD"</span> },
+    <span style="color: #9fb8d8;">"counterparty"</span>: { <span style="color: #9fb8d8;">"id"</span>: <span style="color: #8fbf9f;">"cp_9f21"</span>, <span style="color: #9fb8d8;">"first_seen"</span>: <span style="color: #8fbf9f;">"6h"</span> },
+    <span style="color: #9fb8d8;">"session"</span>: { <span style="color: #9fb8d8;">"cell"</span>: <span style="color: #8fbf9f;">"31-ORN"</span>, <span style="color: #9fb8d8;">"ip"</span>: <span style="color: #8fbf9f;">"41.108.•.•"</span> },
+    <span style="color: #9fb8d8;">"budget"</span>: { <span style="color: #9fb8d8;">"max_units"</span>: <span style="color: #d8b25a;">8</span> }
+  <span style="color: #8fbf9f;">}'</span></pre>
+      </div>
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: rgba(28,26,20,0.5); margin-top: 14px;">→ 200 OK · { "verdict": "hold", "units_spent": 7, "trace": [ … ] }</div>
+    </section>
+
+    <section data-wave="alert" data-screen-label="Closing" style="padding: clamp(70px, 11vw, 150px) 0 clamp(70px, 10vw, 130px); border-top: 1px solid rgba(28,26,20,0.14);">
+      <p style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(38px, 7vw, 96px); line-height: 0.96; letter-spacing: -0.04em; margin: 0; max-width: 15ch; text-wrap: balance;">Ask the network. Not the person.</p>
+      <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: clamp(30px, 4vw, 52px);">
+        <a href="#playground" style="font-family: 'IBM Plex Mono', monospace; font-size: clamp(13px, 1.3vw, 16px); font-weight: 600; letter-spacing: 0.1em; padding: 20px 30px; border-radius: 3px; background: #b23a2a; color: #f4f1e9; box-shadow: 8px 8px 0 rgba(28,26,20,0.85);" style-hover="background: #1c1a14; color: #f4f1e9;">TRY IT — GO AHEAD, TRY TO FOOL IT</a>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: rgba(28,26,20,0.45);">no signup · sandbox keys · 12 free units</span>
+      </div>
+    </section>
+
+    <footer style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 26px 0 40px; border-top: 1px solid rgba(28,26,20,0.14); font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; color: rgba(28,26,20,0.4);">
+      <span>TRUST · MOBILE IDENTITY VERDICTS</span>
+      <span>ALGIERS · 2026</span>
+    </footer>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;headline&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Everyone can be faked. The network can't.&quot;,&quot;The one thing in your transaction that can't lie.&quot;,&quot;Ask the network. Not the person.&quot;],&quot;default&quot;:&quot;Everyone can be faked. The network can't.&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Copy&quot;},&quot;traceSpeed&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1,&quot;min&quot;:0.5,&quot;max&quot;:2,&quot;step&quot;:0.1,&quot;unit&quot;:&quot;x&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Simulator&quot;},&quot;autorunHero&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Simulator&quot;},&quot;featuredCase&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;A&quot;,&quot;B&quot;,&quot;C&quot;],&quot;default&quot;:&quot;B&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Case files&quot;},&quot;caseMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Accordion&quot;,&quot;All open&quot;],&quot;default&quot;:&quot;Accordion&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Case files&quot;}}">
+const KIND = {
+  THINK:   { bg: 'rgba(232,228,216,0.10)', fg: 'rgba(232,228,216,0.72)', color: 'rgba(232,228,216,0.9)' },
+  CALL:    { bg: 'rgba(159,184,216,0.16)', fg: '#9fb8d8', color: 'rgba(232,228,216,0.78)' },
+  OBSERVE: { bg: 'rgba(143,191,159,0.16)', fg: '#8fbf9f', color: 'rgba(232,228,216,0.68)' },
+  FLAG:    { bg: 'rgba(178,58,42,0.24)', fg: '#e8877a', color: '#f0b9b0' }
+};
+const VC = { APPROVE: '#8fbf9f', REVIEW: '#d8b25a', HOLD: '#e8877a' };
+const CURL = 'curl -X POST https://api.trust.dz/v1/verify \\\n  -H "Authorization: Bearer $TRUST_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d \'{\n    "msisdn": "+213xxxxx4417",\n    "amount": { "value": 184000, "currency": "DZD" },\n    "counterparty": { "id": "cp_9f21", "first_seen": "6h" },\n    "session": { "cell": "31-ORN", "ip": "41.108.x.x" },\n    "budget": { "max_units": 8 }\n  }\'';
+
+const fmt = (n) => n.toLocaleString('en-US');
+
+function buildPlan(amount, newCp, geoMatch) {
+  let risk = 0;
+  if (amount > 60000) risk += 2; else if (amount > 15000) risk += 1;
+  if (newCp) risk += 2;
+  if (!geoMatch) risk += 2;
+  const budget = Math.min(3 + risk, 10);
+  const s = [];
+  s.push({ kind: 'THINK', pre: 240, text: fmt(amount) + ' DZD. Counterparty ' + (newCp ? 'unknown to the registry' : 'seen 14x before') + '. Session ' + (geoMatch ? 'matches home cell 16-ALG' : 'is 412 km from home cell') + '. Budget allocated: ' + budget + ' units.' });
+  s.push({ kind: 'CALL', pre: 300, cost: 1, text: 'bind.device_check({ msisdn: "+213xxxxx4417" })' });
+  s.push({ kind: 'OBSERVE', pre: 620, text: '{ "bound": true, "attestation": 0.99, "sim_changed_at": ' + (geoMatch ? 'null' : '"14h ago"') + ' }' });
+  if (!geoMatch) {
+    s.push({ kind: 'FLAG', pre: 420, text: 'The device is bound, but the identity underneath it moved 14 hours ago. Buying the expensive signal.' });
+    s.push({ kind: 'CALL', pre: 280, cost: 2, text: 'network.sim_swap_probe({ window: "72h" })' });
+    s.push({ kind: 'OBSERVE', pre: 880, text: '{ "swap_confirmed": true, "port_out": true, "new_imei": true, "carrier_ticket": "PO-88134" }' });
+  }
+  s.push({ kind: 'CALL', pre: 300, cost: 1, text: 'registry.counterparty_lookup({ id: "cp_9f21" })' });
+  s.push({ kind: 'OBSERVE', pre: 560, text: newCp
+    ? '{ "trust": 0.11, "first_seen": "6h ago", "inbound_strangers_7d": 43, "cluster": "MC-7734" }'
+    : '{ "trust": 0.94, "first_seen": "2024-03-11", "prior_transfers": 14, "cluster": null }' });
+  if (!geoMatch) {
+    s.push({ kind: 'CALL', pre: 260, cost: 1, text: 'geo.session_match({ cell: "31-ORN" })' });
+    s.push({ kind: 'OBSERVE', pre: 500, text: '{ "home_cell": "16-ALG", "delta_km": 412, "travel_plausible": false }' });
+  }
+  if (amount > 60000) {
+    s.push({ kind: 'CALL', pre: 260, cost: 2, text: 'velocity.window_scan({ window: "1h" })' });
+    s.push({ kind: 'OBSERVE', pre: 640, text: '{ "attempts": 4, "cumulative_dzd": ' + fmt(amount + 61000) + ', "pct_of_balance": 0.91 }' });
+  }
+  const verdict = risk >= 5 ? 'HOLD' : risk >= 2 ? 'REVIEW' : 'APPROVE';
+  const note = verdict === 'HOLD'
+    ? 'Independent signals agree: the account is no longer the person. Held pending re-binding.'
+    : verdict === 'REVIEW'
+      ? 'One signal is off but the binding holds. Routed to a human with the trace attached.'
+      : 'Nothing to escalate. Closed cheap, as it should be.';
+  s.push({ kind: 'THINK', pre: 420, text: verdict === 'APPROVE' ? 'Cheap answers agree. Stopping before the budget is spent.' : 'Signals are independent and they point the same way. Closing.' });
+  return { steps: s, budget: budget, verdict: verdict, note: note, risk: risk };
+}
+
+const CASES = [
+  { id: 'CASE A', title: 'Payroll, Tuesday, 09:12', tag: 'ROUTINE', subject: 'subject: +213xxxxx1092 -> cp_0041 · 42,000 DZD',
+    steps: [
+      { kind: 'THINK', pre: 200, text: '42,000 DZD to an employer-side account seen every month since March 2024. Budget: 3 units.' },
+      { kind: 'CALL', pre: 260, cost: 1, text: 'bind.device_check({})' },
+      { kind: 'OBSERVE', pre: 520, text: '{ "bound": true, "attestation": 0.99, "sim_changed_at": null }' },
+      { kind: 'CALL', pre: 240, cost: 1, text: 'registry.counterparty_lookup({ id: "cp_0041" })' },
+      { kind: 'OBSERVE', pre: 480, text: '{ "trust": 0.97, "prior_transfers": 29, "cluster": null }' },
+      { kind: 'THINK', pre: 380, text: 'Two cheap questions, two clean answers. Spending more here would be theatre.' }
+    ], verdict: 'APPROVE', units: 2, note: '2 units. The boring case has to be cheap or the whole budget idea collapses.' },
+  { id: 'CASE B', title: 'A six-hour-old account asks for 184,000 DZD', tag: 'ESCALATION', subject: 'subject: +213xxxxx4417 -> cp_9f21 · 184,000 DZD · 03:12 local',
+    steps: [
+      { kind: 'THINK', pre: 200, text: '184,000 DZD, 91% of balance, counterparty unknown. Password was correct. Budget: 8 units.' },
+      { kind: 'CALL', pre: 260, cost: 1, text: 'bind.device_check({})' },
+      { kind: 'OBSERVE', pre: 600, text: '{ "bound": true, "attestation": 0.98, "sim_changed_at": "14h ago" }' },
+      { kind: 'FLAG', pre: 460, text: 'Bound, but the SIM moved 14 hours ago. A correct password proves nothing about who holds the number now.' },
+      { kind: 'CALL', pre: 280, cost: 2, text: 'network.sim_swap_probe({ window: "72h" })' },
+      { kind: 'OBSERVE', pre: 900, text: '{ "swap_confirmed": true, "port_out": true, "new_imei": true, "carrier_ticket": "PO-88134" }' },
+      { kind: 'CALL', pre: 260, cost: 2, text: 'registry.counterparty_lookup({ id: "cp_9f21" })' },
+      { kind: 'OBSERVE', pre: 620, text: '{ "trust": 0.11, "first_seen": "6h ago", "inbound_strangers_7d": 43, "cluster": "MC-7734" }' },
+      { kind: 'CALL', pre: 240, cost: 1, text: 'geo.session_match({ cell: "31-ORN" })' },
+      { kind: 'OBSERVE', pre: 520, text: '{ "home_cell": "16-ALG", "delta_km": 412, "travel_plausible": false }' },
+      { kind: 'CALL', pre: 240, cost: 1, text: 'velocity.window_scan({ window: "1h" })' },
+      { kind: 'OBSERVE', pre: 560, text: '{ "attempts": 4, "escalating": true, "pct_of_balance": 0.91 }' },
+      { kind: 'THINK', pre: 420, text: 'Four independent sources, none of them the customer. Hold and force re-binding.' }
+    ], verdict: 'HOLD', units: 7, note: '7 units. Held 61 seconds after the first tap — before the transfer cleared.' },
+  { id: 'CASE C', title: '96,000 DZD at 03:40 — and it let it through', tag: 'FALSE POSITIVE AVOIDED', subject: 'subject: +213xxxxx7730 -> cp_self_2 · 96,000 DZD · 03:40 local',
+    steps: [
+      { kind: 'THINK', pre: 200, text: 'Large, nocturnal, unusual hour. Every fixed rule set flags this. Budget: 6 units.' },
+      { kind: 'CALL', pre: 260, cost: 1, text: 'bind.device_check({})' },
+      { kind: 'OBSERVE', pre: 560, text: '{ "bound": true, "bound_since": "2023-04-02", "sim_changed_at": null }' },
+      { kind: 'CALL', pre: 240, cost: 1, text: 'registry.counterparty_lookup({ id: "cp_self_2" })' },
+      { kind: 'OBSERVE', pre: 540, text: '{ "same_owner": true, "kyc_match": 1.0, "prior_transfers": 7 }' },
+      { kind: 'CALL', pre: 240, cost: 1, text: 'geo.session_match({ cell: "16-ALG" })' },
+      { kind: 'OBSERVE', pre: 480, text: '{ "home_cell": "16-ALG", "delta_km": 0.4 }' },
+      { kind: 'THINK', pre: 400, text: 'Own device, own second account, own cell. The hour is not a signal — it is a habit.' }
+    ], verdict: 'APPROVE', units: 3, note: '3 units. Blocking this would have cost the bank a customer and caught nobody.' }
+];
+
+class Component extends DCLogic {
+  state = {
+    amount: 2400, newCp: false, geoMatch: true,
+    lines: [], units: 0, verdict: null, note: '', budget: 3,
+    running: false, started: false,
+    openCase: null, caseLines: {}, caseUnits: {}, caseVerdict: {},
+    copied: false
+  };
+
+  constructor(props) {
+    super(props);
+    this.timers = [];
+    this.el = {};
+    this.simGen = 0;
+    this.caseGen = 0;
+    this.wave = { target: 0.42, cur: 0.42, hue: 0, hueCur: 0, jag: 0, jagCur: 0 };
+    this.state.openCase = props.featuredCase || 'B';
+  }
+
+  get speed() { return Math.max(0.4, this.props.traceSpeed || 1); }
+
+  sleep(ms) {
+    return new Promise((res) => { const t = setTimeout(res, ms / this.speed); this.timers.push(t); });
+  }
+
+  componentDidMount() {
+    this.mountWave();
+    this.mountReveal();
+    const cs = CASES.find((c) => c.id.endsWith(this.state.openCase));
+    if (cs) this.playCase(cs);
+    if (this.props.autorunHero !== false) {
+      const t = setTimeout(() => this.runSim(), 900);
+      this.timers.push(t);
+    }
+  }
+
+  componentWillUnmount() {
+    this.simGen++; this.caseGen++;
+    this.timers.forEach(clearTimeout);
+    if (this.raf) cancelAnimationFrame(this.raf);
+    if (this.io) this.io.disconnect();
+    if (this.io2) this.io2.disconnect();
+    window.removeEventListener('resize', this.onResize);
+  }
+
+  mountReveal() {
+    const root = this.el.root;
+    if (!root || !window.IntersectionObserver) return;
+    const items = root.querySelectorAll('[data-reveal]');
+    this.io2 = new IntersectionObserver((ents) => {
+      ents.forEach((e) => {
+        if (e.isIntersecting) {
+          e.target.style.opacity = '1';
+          e.target.style.transform = 'translateY(0)';
+          this.io2.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.35, rootMargin: '0px 0px -8% 0px' });
+    items.forEach((el) => this.io2.observe(el));
+  }
+
+  mountWave() {
+    const cv = this.el.wave;
+    const root = this.el.root;
+    if (!cv) return;
+    const ctx = cv.getContext('2d');
+    this.onResize = () => {
+      const r = cv.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      cv.width = Math.max(1, Math.round(r.width * dpr));
+      cv.height = Math.max(1, Math.round(r.height * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      this.cssW = r.width; this.cssH = r.height;
+    };
+    this.onResize();
+    window.addEventListener('resize', this.onResize);
+
+    if (root && window.IntersectionObserver) {
+      const secs = root.querySelectorAll('[data-wave]');
+      this.io = new IntersectionObserver((ents) => {
+        let best = null;
+        ents.forEach((e) => { if (e.isIntersecting && (!best || e.intersectionRatio > best.intersectionRatio)) best = e; });
+        if (!best) return;
+        const m = best.target.getAttribute('data-wave');
+        this.sectionWave = m;
+        if (!this.state.running) this.applyWave(m);
+      }, { threshold: [0.2, 0.5, 0.8] });
+      secs.forEach((el) => this.io.observe(el));
+    }
+
+    const draw = () => {
+      this.raf = requestAnimationFrame(draw);
+      const w = this.cssW || 0, h = this.cssH || 0;
+      if (w < 6) return;
+      const wv = this.wave;
+      wv.cur += (wv.target - wv.cur) * 0.05;
+      wv.hueCur += (wv.hue - wv.hueCur) * 0.05;
+      wv.jagCur += (wv.jag - wv.jagCur) * 0.05;
+      ctx.clearRect(0, 0, w, h);
+      const cx = w * 0.56;
+      ctx.fillStyle = 'rgba(28,26,20,0.06)';
+      for (let y = 0; y < h; y += 22) ctx.fillRect(cx - w * 0.22, y, w * 0.44, 1);
+      ctx.strokeStyle = 'rgba(28,26,20,0.12)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, h); ctx.stroke();
+      const t = performance.now() / 1000;
+      const amp = wv.cur * (w * 0.34);
+      const g = wv.hueCur;
+      const r = Math.round(47 + (178 - 47) * g), gg = Math.round(109 + (58 - 109) * g), b = Math.round(81 + (42 - 81) * g);
+      ctx.strokeStyle = 'rgba(' + r + ',' + gg + ',' + b + ',0.85)';
+      ctx.lineWidth = 1.7;
+      ctx.beginPath();
+      for (let y = 0; y <= h; y += 2) {
+        const p = y * 0.055 + t * 1.5;
+        let v = Math.sin(p) * 0.5 + Math.sin(p * 2.31 + 1.1) * 0.26;
+        if (wv.jagCur > 0.01) v += (Math.sin(p * 11.7) * 0.5 + Math.sin(p * 23.3 + 2) * 0.34) * wv.jagCur;
+        const x = cx + v * amp;
+        if (y === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    };
+    this.raf = requestAnimationFrame(draw);
+  }
+
+  applyWave(mode) {
+    const w = this.wave;
+    if (mode === 'alert') { w.target = 1; w.hue = 1; w.jag = 0.55; }
+    else if (mode === 'watch') { w.target = 0.7; w.hue = 0.5; w.jag = 0.18; }
+    else { w.target = 0.4; w.hue = 0; w.jag = 0; }
+  }
+
+  async play(steps, apply, isCurrent) {
+    let lines = [], units = 0;
+    for (const s of steps) {
+      await this.sleep(s.pre || 260);
+      if (!isCurrent()) return { lines, units };
+      const k = KIND[s.kind];
+      lines = lines.concat([{ kind: s.kind, text: '', bg: k.bg, fg: k.fg, color: k.color, caret: 'none' }]);
+      apply(lines, units);
+      const full = s.text;
+      for (let i = 0; i < full.length; i += 2) {
+        await this.sleep(11);
+        if (!isCurrent()) return { lines, units };
+        const cur = lines.slice();
+        const last = Object.assign({}, cur[cur.length - 1], { text: full.slice(0, i + 2), caret: 'inline-block' });
+        cur[cur.length - 1] = last;
+        lines = cur;
+        apply(lines, units);
+      }
+      const done = lines.slice();
+      done[done.length - 1] = Object.assign({}, done[done.length - 1], { text: full, caret: 'none' });
+      lines = done;
+      apply(lines, units);
+      if (s.cost) {
+        for (let c = 0; c < s.cost; c++) {
+          await this.sleep(150);
+          if (!isCurrent()) return { lines, units };
+          units += 1;
+          apply(lines, units);
+        }
+      }
+    }
+    return { lines, units };
+  }
+
+  async runSim() {
+    const gen = ++this.simGen;
+    const isCurrent = () => gen === this.simGen;
+    const plan = buildPlan(this.state.amount, this.state.newCp, this.state.geoMatch);
+    this.setState({ lines: [], units: 0, verdict: null, note: '', running: true, started: true, budget: plan.budget });
+    this.applyWave(plan.risk >= 5 ? 'alert' : plan.risk >= 2 ? 'watch' : 'calm');
+    await this.play(plan.steps, (lines, units) => { if (isCurrent()) this.setState({ lines: lines, units: units }); }, isCurrent);
+    if (!isCurrent()) return;
+    await this.sleep(320);
+    if (!isCurrent()) return;
+    this.setState({ verdict: plan.verdict, note: plan.note, running: false });
+    this.applyWave(this.sectionWave || 'calm');
+  }
+
+  async playCase(cs) {
+    const gen = ++this.caseGen;
+    const isCurrent = () => gen === this.caseGen;
+    const key = cs.id;
+    this.setState((st) => ({
+      caseLines: Object.assign({}, st.caseLines, { [key]: [] }),
+      caseUnits: Object.assign({}, st.caseUnits, { [key]: 0 }),
+      caseVerdict: Object.assign({}, st.caseVerdict, { [key]: null })
+    }));
+    await this.play(cs.steps, (lines, units) => {
+      if (!isCurrent()) return;
+      this.setState((st) => ({
+        caseLines: Object.assign({}, st.caseLines, { [key]: lines }),
+        caseUnits: Object.assign({}, st.caseUnits, { [key]: units })
+      }));
+    }, isCurrent);
+    if (!isCurrent()) return;
+    await this.sleep(300);
+    if (!isCurrent()) return;
+    this.setState((st) => ({ caseVerdict: Object.assign({}, st.caseVerdict, { [key]: cs.verdict }) }));
+  }
+
+  openCase(cs) {
+    const short = cs.id.slice(-1);
+    if (this.state.openCase === short) { this.caseGen++; this.setState({ openCase: null }); return; }
+    this.setState({ openCase: short });
+    this.playCase(cs);
+  }
+
+  copy() {
+    const done = () => { this.setState({ copied: true }); const t = setTimeout(() => this.setState({ copied: false }), 1800); this.timers.push(t); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(CURL).then(done, done);
+    else done();
+  }
+
+  renderVals() {
+    const st = this.state;
+    const plan = buildPlan(st.amount, st.newCp, st.geoMatch);
+    const budget = st.started ? st.budget : plan.budget;
+    const maxTicks = 12;
+    const ticks = [];
+    for (let i = 0; i < maxTicks; i++) {
+      const on = i < st.units;
+      const overBudget = i >= budget;
+      ticks.push({
+        h: on ? (10 + (i % 3) * 5 + 8) + 'px' : '10px',
+        bg: on ? (overBudget ? '#e8877a' : i >= budget - 2 ? '#d8b25a' : '#8fbf9f') : 'rgba(232,228,216,0.13)'
+      });
+    }
+    const headlines = {
+      'Everyone can be faked. The network can\'t.': 1,
+      'The one thing in your transaction that can\'t lie.': 1,
+      'Ask the network. Not the person.': 1
+    };
+    const hl = this.props.headline && headlines[this.props.headline] ? this.props.headline : 'Everyone can be faked. The network can\'t.';
+
+    const openAll = this.props.caseMode === 'All open';
+    const cases = CASES.map((cs) => {
+      const short = cs.id.slice(-1);
+      const open = openAll || st.openCase === short;
+      const featured = (this.props.featuredCase || 'B') === short;
+      return {
+        id: cs.id, title: cs.title, tag: cs.tag, subject: cs.subject, open: open,
+        border: open ? '#1c1a14' : 'rgba(28,26,20,0.2)',
+        wrapBg: open ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.28)',
+        idColor: featured ? '#b23a2a' : 'rgba(28,26,20,0.42)',
+        tagColor: cs.tag === 'ESCALATION' ? '#b23a2a' : cs.tag === 'ROUTINE' ? 'rgba(28,26,20,0.45)' : '#8a6a1a',
+        lines: st.caseLines[cs.id] || [],
+        unitsLabel: String(st.caseUnits[cs.id] || 0),
+        verdict: st.caseVerdict[cs.id] || null,
+        verdictColor: VC[cs.verdict],
+        note: cs.note,
+        onOpen: () => this.openCase(cs)
+      };
+    });
+
+    const off = { bg: 'transparent', border: 'rgba(232,228,216,0.2)', fg: 'rgba(232,228,216,0.6)' };
+    const on = { bg: 'rgba(178,58,42,0.16)', border: '#b23a2a', fg: '#e8877a' };
+    const cp = st.newCp ? on : off;
+    const geo = st.geoMatch ? off : on;
+
+    return {
+      rootRef: (el) => { this.el.root = el; },
+      waveRef: (el) => { this.el.wave = el; },
+      headline: hl,
+      amount: st.amount,
+      amountLabel: fmt(st.amount),
+      onAmount: (e) => { this.simGen++; this.setState({ amount: parseInt(e.target.value, 10), running: false }); },
+      toggleCp: () => { this.simGen++; this.setState({ newCp: !st.newCp, running: false }); },
+      toggleGeo: () => { this.simGen++; this.setState({ geoMatch: !st.geoMatch, running: false }); },
+      cpValue: st.newCp ? 'true' : 'false', cpBg: cp.bg, cpBorder: cp.border, cpFg: cp.fg,
+      geoValue: st.geoMatch ? 'true' : 'false', geoBg: geo.bg, geoBorder: geo.border, geoFg: geo.fg,
+      runSim: () => this.runSim(),
+      runLabel: st.running ? 'RUNNING…' : 'RUN',
+      makeSuspicious: () => { this.setState({ amount: 184000, newCp: true, geoMatch: false }, () => this.runSim()); },
+      statusColor: st.running ? '#d8b25a' : st.verdict ? VC[st.verdict] : 'rgba(232,228,216,0.4)',
+      statusLabel: st.running ? 'REASONING' : st.verdict ? 'CLOSED' : 'IDLE',
+      simLines: st.lines,
+      simIdle: !st.started,
+      units: st.units,
+      unitsLabel: String(st.units).padStart(2, '0'),
+      budget: String(budget).padStart(2, '0'),
+      ticks: ticks,
+      needleLeft: (Math.min(st.units, maxTicks) / maxTicks) * 100 + '%',
+      simVerdict: st.verdict,
+      verdictColor: st.verdict ? VC[st.verdict] : '#e8e4d8',
+      verdictNote: st.note,
+      cases: cases,
+      copyCurl: () => this.copy(),
+      copyLabel: st.copied ? 'COPIED' : 'COPY'
+    };
+  }
+}
+</script>
+</body>
+</html>

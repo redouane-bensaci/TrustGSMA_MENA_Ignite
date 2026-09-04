@@ -1,0 +1,53 @@
+"""
+TRUST Internal Ledger & Counterparty History Service
+Retrieved independently by the TRUST platform to prevent caller tampering.
+"""
+from typing import Dict
+from app.schemas import CounterpartyHistory
+
+# In-memory mock ledger for hackathon demonstration
+MOCK_LEDGER: Dict[str, CounterpartyHistory] = {
+    # Scenario A: Known routine counterparty
+    "+213550112233": CounterpartyHistory(
+        msisdn="+213550112233",
+        first_seen="2024-03-11",
+        prior_transactions=29,
+        prior_verdicts=["APPROVE", "APPROVE", "APPROVE"],
+        msisdn_seen_across_tenants=1,
+        portable_trust_score=0.97
+    ),
+    # Scenario B: Stranger counterparty in escalated order
+    "+213661448899": CounterpartyHistory(
+        msisdn="+213661448899",
+        first_seen="6 hours ago",
+        prior_transactions=0,
+        prior_verdicts=[],
+        msisdn_seen_across_tenants=1,
+        portable_trust_score=0.11
+    ),
+    # Scenario C: Suspicious number used across multiple tenants
+    "+213770990011": CounterpartyHistory(
+        msisdn="+213770990011",
+        first_seen="today",
+        prior_transactions=4,
+        prior_verdicts=["HOLD", "REJECT"],
+        msisdn_seen_across_tenants=4,  # Flag: same number, 4 identities in 24h
+        portable_trust_score=0.04
+    )
+}
+
+def lookup_counterparty(msisdn: str) -> CounterpartyHistory:
+    """Retrieve verified history from TRUST internal ledger."""
+    clean_msisdn = msisdn.replace(" ", "").replace("-", "")
+    if clean_msisdn in MOCK_LEDGER:
+        return MOCK_LEDGER[clean_msisdn]
+    
+    # Default for completely new MSISDN
+    return CounterpartyHistory(
+        msisdn=msisdn,
+        first_seen="just now",
+        prior_transactions=0,
+        prior_verdicts=[],
+        msisdn_seen_across_tenants=1,
+        portable_trust_score=None
+    )

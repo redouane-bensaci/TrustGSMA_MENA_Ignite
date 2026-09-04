@@ -1,0 +1,19 @@
+{
+  "scenario_id": "SCENARIO_C",
+  "title": "Business Fakes a Verification Check",
+  "description": "Manual-entry tier verification where a malicious business attempts to forge an onboarding pass by typing plausible details. The network discovers the MSISDN has no active authentication, unreachable device (>30 days inactive), and cross-tenant duplicate submissions. Immediate REJECT.",
+  "expected_verdict": "REJECT",
+  "expected_units": 4,
+  "request": {
+    "event_type": "onboarding_verification",
+    "amount": { "value": 75000, "currency": "DZD" },
+    "counterparty": {
+      "msisdn": "+213770990011",
+      "declared_name": "Forged Profile Corp",
+      "declared_location": { "label": "Constantine", "cell": "25-CST" }
+    },
+    "channel": "playground",
+    "idempotency_key": "onb_fake_9941"
+  },
+  "business_binding_id": "bb_microloan_lender_03"
+}

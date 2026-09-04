@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRUST Docs · API Reference & CAMARA Registry</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f4f1e9;
+      --card-bg: #ffffff;
+      --text: #1c1a14;
+      --text-muted: rgba(28, 26, 20, 0.65);
+      --border: rgba(28, 26, 20, 0.15);
+      --accent: #b23a2a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg); color: var(--text); font-family: 'Archivo', sans-serif;
+      padding: 30px 24px 80px; line-height: 1.6;
+    }
+    .container { max-width: 960px; margin: 0 auto; }
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding-bottom: 20px; border-bottom: 1px solid var(--border); margin-bottom: 40px;
+    }
+    .logo {
+      font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600;
+      letter-spacing: 0.35em; color: var(--text); text-decoration: none;
+    }
+    h1 {
+      font-family: 'Bricolage Grotesque', sans-serif; font-size: 38px; font-weight: 800;
+      letter-spacing: -0.03em; margin-bottom: 12px;
+    }
+    h2 {
+      font-family: 'Bricolage Grotesque', sans-serif; font-size: 24px; font-weight: 800;
+      margin: 36px 0 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px;
+    }
+    pre {
+      background: #17150f; color: #e8e4d8; padding: 18px; border-radius: 4px;
+      font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; overflow-x: auto;
+      margin: 16px 0 24px; border: 1px solid rgba(28,26,20,0.8);
+    }
+    .tool-card {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 4px; padding: 20px; margin-bottom: 16px;
+    }
+    .tool-header {
+      display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;
+    }
+    .tool-title { font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; }
+    .tool-badge {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+      padding: 3px 8px; background: rgba(178,58,42,0.12); color: var(--accent); border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a href="../../index.html" class="logo">TRUST</a>
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-muted);">
+        DEVELOPER DOCUMENTATION & CAMARA REFERENCE
+      </div>
+    </header>
+
+    <h1>Integrating TRUST</h1>
+    <p style="color: var(--text-muted); font-size: 16px;">
+      One API endpoint gives your business real-time mobile network verification without needing to build or maintain complex carrier integrations.
+    </p>
+
+    <h2>Quickstart (cURL)</h2>
+    <pre><code>curl -X POST https://api.trust.dz/v1/verify \
+  -H "Authorization: Bearer tr_test_9941a8" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_type": "order_placement",
+    "amount": { "value": 74000, "currency": "DZD" },
+    "counterparty": {
+      "msisdn": "+213661448899",
+      "declared_name": "Yacine Mansouri",
+      "declared_location": { "cell": "31-ORN", "label": "Oran" }
+    },
+    "channel": "api",
+    "idempotency_key": "ord_88213"
+  }'</code></pre>
+
+    <h2>The 6 CAMARA Network Tools</h2>
+    <p style="color: var(--text-muted); margin-bottom: 20px;">
+      TRUST autonomously selects which of these six GSMA Open Gateway APIs to query via Nokia Network as Code:
+    </p>
+
+    <div class="tool-card">
+      <div class="tool-header">
+        <span class="tool-title">1. Number Verification (camara:number-verification:v1)</span>
+        <span class="tool-badge">COST: 1 UNIT</span>
+      </div>
+      <p style="font-size: 13.5px; color: var(--text-muted);">Proves the mobile session matches the claimed carrier subscription without sending vulnerable SMS OTPs.</p>
+    </div>
+
+    <div class="tool-card">
+      <div class="tool-header">
+        <span class="tool-title">2. Device Status & Roaming (camara:device-status:v1)</span>
+        <span class="tool-badge">COST: 1 UNIT</span>
+      </div>
+      <p style="font-size: 13.5px; color: var(--text-muted);">Queries HLR/VLR to ensure a physical device is live, registered, and not roaming unexpectedly.</p>
+    </div>
+
+    <div class="tool-card">
+      <div class="tool-header">
+        <span class="tool-title">3. SIM Swap Probe (camara:sim-swap:v1)</span>
+        <span class="tool-badge">COST: 2 UNITS</span>
+      </div>
+      <p style="font-size: 13.5px; color: var(--text-muted);">Checks carrier records for recent SIM replacements or port-outs, detecting account takeovers instantly.</p>
+    </div>
+
+    <div class="tool-card">
+      <div class="tool-header">
+        <span class="tool-title">4. Device Location Verification (camara:device-location:v1)</span>
+        <span class="tool-badge">COST: 1 UNIT</span>
+      </div>
+      <p style="font-size: 13.5px; color: var(--text-muted);">Compares the handset's serving cell tower with the delivery or withdrawal address, catching spoofed VPNs.</p>
+    </div>
+
+    <div class="tool-card">
+      <div class="tool-header">
+        <span class="tool-title">5. Carrier KYC Match (camara:kyc-match:v1)</span>
+        <span class="tool-badge">COST: 2 UNITS</span>
+      </div>
+      <p style="font-size: 13.5px; color: var(--text-muted);">Validates national ID and legal name against telecom subscriber contracts filed with operators.</p>
+    </div>
+
+    <div class="tool-card">
+      <div class="tool-header">
+        <span class="tool-title">6. Number Recycling Check (camara:number-recycling:v1)</span>
+        <span class="tool-badge">COST: 1 UNIT</span>
+      </div>
+      <p style="font-size: 13.5px; color: var(--text-muted);">Verifies whether an orphaned MSISDN was reassigned to a new subscriber to prevent credential leakages.</p>
+    </div>
+  </div>
+</body>
+</html>
