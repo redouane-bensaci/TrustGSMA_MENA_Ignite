@@ -12,3 +12,7 @@ env/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Node / frontend build
+node_modules/
+dist/
