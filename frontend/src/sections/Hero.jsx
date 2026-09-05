@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { buildPlan, fmt, VC } from '../trace'
+import { buildPlan, fmt, VC } from '../lib/trace'
 import { useTracePlayer } from '../hooks/useTracePlayer'
 import TraceLines from '../components/TraceLines'
 import VerdictStamp from '../components/VerdictStamp'

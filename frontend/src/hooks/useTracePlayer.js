@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import gsap from 'gsap'
-import { KIND } from '../trace'
+import { KIND } from '../lib/trace'
 
 // Plays a list of trace steps (THINK/CALL/OBSERVE/FLAG) into `lines`,
 // typing each line's text character by character and accumulating spent

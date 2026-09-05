@@ -84,3 +84,23 @@ class ToolMetadata(BaseModel):
     latency_profile: str
     description: str
     what_it_proves: str
+
+class SignupRequest(BaseModel):
+    business_name: str
+    email: str
+    password: str
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class AuthUser(BaseModel):
+    id: str
+    email: str
+    business_name: str
+    tenant_id: str
+    onboarded: bool = False
+
+class AuthResponse(BaseModel):
+    token: str
+    user: AuthUser

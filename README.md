@@ -30,9 +30,9 @@ TRUST delivers identical carrier-grounded protection across three tiers:
 
 | Tier | Target Audience | Integration Model | Interface |
 |---|---|---|---|
-| **Tier 1: No-Code Playground** | Micro-merchants, local lenders, SME ops teams | Manual data entry / form submission | [`/frontend/playground/`](./frontend/playground/index.html) |
+| **Tier 1: No-Code Playground** | Micro-merchants, local lenders, SME ops teams | Manual data entry / form submission | `/playground` |
 | **Tier 2: Platform Plugin** | E-commerce stores (Shopify, WooCommerce, regional platforms) | Webhook trigger on checkout or order placement | Webhook worker hitting `POST /v1/verify` |
-| **Tier 3: Developer API & Dashboard** | Commercial banks, fintech wallets, telecom payment rails | REST API (`/v1/verify`) with live/test keys, SDKs | [`/frontend/dashboard/`](./frontend/dashboard/index.html) |
+| **Tier 3: Developer API & Dashboard** | Commercial banks, fintech wallets, telecom payment rails | REST API (`/v1/verify`) with live/test keys, SDKs | `/dashboard` (auth required) |
 
 ---
 
@@ -119,24 +119,30 @@ Pre-configured scenarios located in [`scenarios/`](./scenarios/):
 ```
 TrustGSMA_MENA_Ignite/
 │
-├── index.html                     # Main TRUST Interactive Landing Page (v2 design)
-├── support.js                     # Design Canvas runtime & dynamic renderer
+├── index.html                     # Built static output of frontend/ (checked in for zero-build hosting)
+├── assets/                        # Built JS/CSS bundle (same build)
+├── vercel.json                    # SPA rewrite rule for the React Router routes
 │
-├── frontend/
-│   ├── playground/                # Tier 1: No-Code Verification Playground for SMEs
-│   │   └── index.html
-│   ├── dashboard/                 # Tier 3: Banking & Operations Overview Feed
-│   │   └── index.html
-│   └── docs/                      # Developer Documentation & CAMARA API Reference
-│       └── index.html
+├── frontend/                      # Vite + React + Tailwind site (source of truth)
+│   ├── src/
+│   │   ├── AppRoutes.jsx          # Route table for every page below
+│   │   ├── layouts/               # MarketingLayout, DocsLayout, AuthLayout, DashboardLayout
+│   │   ├── pages/                 # Public pages: Home, HowItWorks, Pricing, Playground, Login, Signup, …
+│   │   │   ├── docs/               # /docs, /docs/quickstart, /docs/api-reference, /docs/tools
+│   │   │   └── dashboard/          # /dashboard/* — Tier 3 authenticated console
+│   │   ├── sections/               # Landing-page sections (Hero, CaseFiles, HowItDecides, …)
+│   │   ├── components/             # Shared UI (WaveCanvas, CodeBlock, RequireAuth, …)
+│   │   └── lib/                    # api.js (backend client), AuthContext.jsx, trace.js
+│   └── .env                        # VITE_API_BASE_URL — points the frontend at the FastAPI backend
 │
 ├── backend/
 │   ├── requirements.txt           # FastAPI, Uvicorn, Pydantic, HTTPX dependencies
 │   ├── .env.example               # Nokia NaC credentials & server configuration
 │   └── app/
 │       ├── main.py                # FastAPI entrypoint (CORS, router mounts)
-│       ├── schemas.py             # Contracts: TransactionEvent, Binding, Verdict
+│       ├── schemas.py             # Contracts: TransactionEvent, Binding, Verdict, Auth
 │       ├── api/v1/
+│       │   ├── auth.py            # POST /v1/auth/signup, /login, GET /me
 │       │   ├── verify.py          # POST /v1/verify (core decision endpoint)
 │       │   ├── business_bindings.py # CRUD for tenant risk context
 │       │   ├── transactions.py    # Past verdict queries and replay
@@ -157,22 +163,14 @@ TrustGSMA_MENA_Ignite/
     └── scenario_c_fake_check.json # Benchmark C: Malicious fake check
 ```
 
+Every page and route above is scoped and tagged (`[DEMO]` / `[SITE]` / `[LATER]`) against
+`TRUST_Website_API_Route_Guide.pdf` — the sidebar in `/dashboard` shows each route's tag inline.
+
 ---
 
 ## 7. Quickstart & Local Setup
 
-### 1. View Frontend Pages
-Simply open `index.html` in your browser or run a lightweight local static server:
-```bash
-# Python static server
-python -m http.server 3000
-```
-- **Landing Page:** [http://localhost:3000/index.html](http://localhost:3000/index.html)
-- **No-Code Playground:** [http://localhost:3000/frontend/playground/index.html](http://localhost:3000/frontend/playground/index.html)
-- **Operations Dashboard:** [http://localhost:3000/frontend/dashboard/index.html](http://localhost:3000/frontend/dashboard/index.html)
-- **Developer Documentation:** [http://localhost:3000/frontend/docs/index.html](http://localhost:3000/frontend/docs/index.html)
-
-### 2. Run the Backend API Server
+### 1. Run the Backend API Server
 ```bash
 cd backend
 python -m venv venv
@@ -186,6 +184,26 @@ uvicorn app.main:app --reload --port 8000
 ```
 - Interactive Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
 - API Health Check: [http://localhost:8000/](http://localhost:8000/)
+- Demo login: `demo@trust.dz` / `trust-demo` (seeded, tied to `bb_default_retail`)
+
+### 2. Run the Frontend (dev mode, hot reload)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Vite reads `frontend/.env` for `VITE_API_BASE_URL` (defaults to `http://localhost:8000`). Open the
+printed local URL — every route in Section 1/2/3 of the route guide is live: `/`, `/how-it-works`,
+`/docs`, `/playground`, `/login`, `/signup`, `/dashboard/*` (auth-gated).
+
+To view the checked-in static build instead (no Node needed), open `index.html` at the repo root or
+serve the folder:
+```bash
+python -m http.server 3000
+```
+Rebuilding after a frontend change: `cd frontend && npm run build` outputs to `../dist`; copy
+`dist/index.html`, `dist/assets/`, and `dist/favicon.svg` over the same-named files/folders at the
+repo root to redeploy the static copy.
 
 ### 3. Test `POST /v1/verify` via cURL
 ```bash

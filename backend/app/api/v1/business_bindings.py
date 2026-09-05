@@ -55,6 +55,8 @@ async def get_binding(id: str):
 @router.post("", response_model=BusinessBinding)
 async def create_binding(binding: BusinessBinding):
     BINDINGS_DB[binding.id] = binding
+    from app.api.v1.auth import mark_tenant_onboarded
+    mark_tenant_onboarded(binding.id)
     return binding
 
 @router.patch("/{id}", response_model=BusinessBinding)
@@ -62,9 +64,11 @@ async def update_binding(id: str, updates: Dict[str, object]):
     binding = BINDINGS_DB.get(id)
     if not binding:
         raise HTTPException(status_code=404, detail="Business binding not found")
-    
+
     current_data = binding.dict()
     current_data.update(updates)
     updated = BusinessBinding(**current_data)
     BINDINGS_DB[id] = updated
+    from app.api.v1.auth import mark_tenant_onboarded
+    mark_tenant_onboarded(id)
     return updated

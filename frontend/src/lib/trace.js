@@ -5,18 +5,7 @@ export const KIND = {
   FLAG: { bg: 'rgba(178,58,42,0.24)', fg: '#e8877a', color: '#f0b9b0' },
 }
 
-export const VC = { APPROVE: '#8fbf9f', REVIEW: '#d8b25a', HOLD: '#e8877a' }
-
-export const CURL = `curl -X POST https://api.trust.dz/v1/verify \\
-  -H "Authorization: Bearer $TRUST_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "msisdn": "+213xxxxx4417",
-    "amount": { "value": 184000, "currency": "DZD" },
-    "counterparty": { "id": "cp_9f21", "first_seen": "6h" },
-    "session": { "cell": "31-ORN", "ip": "41.108.x.x" },
-    "budget": { "max_units": 8 }
-  }'`
+export const VC = { APPROVE: '#8fbf9f', REVIEW: '#d8b25a', HOLD: '#e8877a', REJECT: '#b23a2a' }
 
 export const fmt = (n) => n.toLocaleString('en-US')
 
