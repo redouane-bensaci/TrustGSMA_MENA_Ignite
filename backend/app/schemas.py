@@ -33,6 +33,7 @@ class BusinessBinding(BaseModel):
     id: str
     business_name: str
     sector: str = "retail_physical"
+    transaction_types: List[str] = ["order_placement"]
     settlement: str = "cash_on_delivery"
     value_bands: ValueBands = Field(default_factory=ValueBands)
     declared_threats: List[str] = ["fake_orders", "identity_misuse"]

@@ -4,6 +4,7 @@ import { useAuth } from '../../lib/AuthContext'
 
 const RISK_APPETITES = ['conservative_above_elevated', 'moderate', 'strict']
 const FRICTION_POLICIES = ['invisible_to_customer', 'step_up_on_review', 'always_confirm']
+const TRANSACTION_TYPES = ['order_placement', 'transfer', 'disbursement', 'refund', 'onboarding', 'withdrawal']
 
 export default function Settings() {
   const { user } = useAuth()
@@ -21,6 +22,13 @@ export default function Settings() {
   }, [user])
 
   const update = (field, value) => setBinding((b) => ({ ...b, [field]: value }))
+  const toggleTransactionType = (t) =>
+    setBinding((b) => ({
+      ...b,
+      transaction_types: b.transaction_types.includes(t)
+        ? b.transaction_types.filter((x) => x !== t)
+        : [...b.transaction_types, t],
+    }))
   const updateBand = (band, index, value) =>
     setBinding((b) => {
       const bands = { ...b.value_bands }
@@ -78,6 +86,26 @@ export default function Settings() {
             className="rounded-sm border border-ink/20 bg-white/70 px-3.5 py-2.5 text-sm text-ink outline-none focus:border-rust"
           />
         </label>
+
+        <div>
+          <span className="font-mono text-[11px] tracking-[0.14em] text-ink/55">TRANSACTION TYPES</span>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {TRANSACTION_TYPES.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => toggleTransactionType(t)}
+                className={`cursor-pointer rounded-sm border px-3 py-2 font-mono text-[11.5px] tracking-[0.02em] transition-colors ${
+                  binding.transaction_types.includes(t)
+                    ? 'border-ink bg-ink/8 text-ink'
+                    : 'border-ink/18 bg-white/30 text-ink/60 hover:border-ink/40'
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <label className="flex flex-col gap-1.5">
           <span className="font-mono text-[11px] tracking-[0.14em] text-ink/55">RISK APPETITE</span>

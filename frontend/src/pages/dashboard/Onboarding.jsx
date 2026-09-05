@@ -17,6 +17,15 @@ const SETTLEMENTS = [
   { id: 'card_on_file', label: 'Card on file' },
 ]
 
+const TRANSACTION_TYPES = [
+  'order_placement',
+  'transfer',
+  'disbursement',
+  'refund',
+  'onboarding',
+  'withdrawal',
+]
+
 const THREATS = [
   'fake_orders',
   'identity_misuse',
@@ -48,6 +57,7 @@ export default function Onboarding() {
   const [saving, setSaving] = useState(false)
 
   const [sector, setSector] = useState('retail_physical')
+  const [transactionTypes, setTransactionTypes] = useState(['order_placement'])
   const [settlement, setSettlement] = useState('cash_on_delivery')
   const [bands, setBands] = useState({ routine: [0, 15000], elevated: [15001, 60000], critical: [60001, null] })
   const [threats, setThreats] = useState(['fake_orders', 'identity_misuse'])
@@ -56,6 +66,9 @@ export default function Onboarding() {
 
   const toggleThreat = (t) =>
     setThreats((cur) => (cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t]))
+
+  const toggleTransactionType = (t) =>
+    setTransactionTypes((cur) => (cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t]))
 
   const updateBand = (band, idx, value) =>
     setBands((b) => {
@@ -73,6 +86,7 @@ export default function Onboarding() {
     try {
       await api.updateBinding(user.tenant_id, {
         sector,
+        transaction_types: transactionTypes,
         settlement,
         value_bands: bands,
         declared_threats: threats,
@@ -134,6 +148,26 @@ export default function Onboarding() {
                     </label>
                   ))}
                 </div>
+              </div>
+              <div>
+                <span className="font-mono text-[11px] tracking-[0.14em] text-ink/55">TRANSACTION TYPES</span>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {TRANSACTION_TYPES.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => toggleTransactionType(t)}
+                      className={`cursor-pointer rounded-sm border px-3 py-2 font-mono text-[11.5px] tracking-[0.02em] transition-colors ${
+                        transactionTypes.includes(t)
+                          ? 'border-ink bg-ink/8 text-ink'
+                          : 'border-ink/18 bg-white/30 text-ink/60 hover:border-ink/40'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-ink/45">Which kinds of transactions will actually hit /v1/verify.</p>
               </div>
               <div>
                 <span className="font-mono text-[11px] tracking-[0.14em] text-ink/55">SETTLEMENT TYPE</span>
@@ -253,6 +287,7 @@ export default function Onboarding() {
             <div className="flex flex-col gap-3">
               <div className="rounded border border-ink/16 bg-panel p-5 font-mono text-[12.5px] leading-relaxed text-cream/85">
                 <div>sector: {sector}</div>
+                <div>transaction_types: [{transactionTypes.join(', ')}]</div>
                 <div>settlement: {settlement}</div>
                 <div>
                   value_bands: routine {bands.routine[0]}–{bands.routine[1] ?? '∞'}, elevated {bands.elevated[0]}–
