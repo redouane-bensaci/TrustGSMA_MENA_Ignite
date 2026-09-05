@@ -3,12 +3,12 @@ TRUST AI Reasoning Engine Loop
 Executes: Observe -> Decide -> Call -> Re-evaluate under a hard cost budget.
 """
 import time
-from typing import List, Tuple
+from typing import Awaitable, Callable, List, Tuple
 from app.schemas import (
     TransactionEvent, BusinessBinding, CounterpartyHistory,
     SignalResult, MachineVerdict, MerchantInstruction
 )
-from app.internal.camara.tools import CamaraClient, TOOL_REGISTRY
+from app.internal.camara.tools import CamaraClient, CamaraUnavailableError
 from app.internal.verdict.synthesize import synthesize_verdict
 
 class TrustAgent:
@@ -26,6 +26,38 @@ class TrustAgent:
         elif val >= elevated_floor:
             return 5
         return 3
+
+    async def _call_signal(
+        self,
+        name: str,
+        weight: float,
+        cost_units: int,
+        call: Callable[[], Awaitable[dict]],
+        pass_check: Callable[[dict], bool],
+    ) -> SignalResult:
+        """
+        Runs one CAMARA tool call and always returns a SignalResult — pass,
+        fail, or (if the carrier call errors/times out) uncertain. This is
+        the single choke point every one of the six tools goes through, so
+        an unavailable signal can never be silently scored as a pass.
+        """
+        try:
+            details = await call()
+        except CamaraUnavailableError as exc:
+            return SignalResult(
+                name=name,
+                status="uncertain",
+                weight=weight,
+                cost_units=cost_units,
+                details={"error": exc.reason, "tool": exc.tool_id},
+            )
+        return SignalResult(
+            name=name,
+            status="pass" if pass_check(details) else "fail",
+            weight=weight,
+            cost_units=cost_units,
+            details=details,
+        )
 
     async def execute_reasoning_loop(
         self,
@@ -45,78 +77,85 @@ class TrustAgent:
         # Step 1: Base cheap check (Number verification - 1 unit)
         # ----------------------------------------------------
         if units_spent + 1 <= budget:
-            num_res = await self.camara.verify_number(msisdn)
+            sig = await self._call_signal(
+                "verify_number", 0.40, 1,
+                lambda: self.camara.verify_number(msisdn),
+                lambda d: d.get("verified", False),
+            )
             units_spent += 1
-            is_pass = num_res.get("verified", False)
-            signals_collected.append(SignalResult(
-                name="verify_number",
-                status="pass" if is_pass else "fail",
-                weight=0.40,
-                cost_units=1,
-                details=num_res
-            ))
+            signals_collected.append(sig)
 
         # ----------------------------------------------------
         # Step 2: Device Reachability check (1 unit)
         # ----------------------------------------------------
         if units_spent + 1 <= budget:
-            dev_res = await self.camara.get_device_status(msisdn)
+            sig = await self._call_signal(
+                "get_device_status", 0.20, 1,
+                lambda: self.camara.get_device_status(msisdn),
+                lambda d: d.get("reachable", False),
+            )
             units_spent += 1
-            is_pass = dev_res.get("reachable", False)
-            signals_collected.append(SignalResult(
-                name="get_device_status",
-                status="pass" if is_pass else "fail",
-                weight=0.20,
-                cost_units=1,
-                details=dev_res
-            ))
+            signals_collected.append(sig)
 
-        # If device is completely dark/unreachable and number fails -> don't waste budget, stop early
-        if not signals_collected[0].status == "pass" and not signals_collected[1].status == "pass":
-            # Scenario C early decision
+        # If both cheap checks came back non-passing (fail OR uncertain),
+        # don't waste budget guessing further — buy the recycling check.
+        first_two_clear = any(s.status == "pass" for s in signals_collected[:2])
+        if not first_two_clear:
             if units_spent + 1 <= budget:
-                rec_res = await self.camara.check_number_recycling(msisdn)
+                sig = await self._call_signal(
+                    "check_number_recycling", 0.25, 1,
+                    lambda: self.camara.check_number_recycling(msisdn),
+                    lambda d: not d.get("recycled", False),
+                )
                 units_spent += 1
-                signals_collected.append(SignalResult(
-                    name="check_number_recycling",
-                    status="fail" if rec_res.get("recycled") else "pass",
-                    weight=0.25,
-                    cost_units=1,
-                    details=rec_res
-                ))
+                signals_collected.append(sig)
 
         # ----------------------------------------------------
         # Step 3: Adaptive Escalation based on Risk
         # ----------------------------------------------------
-        # Check if transaction is elevated/critical or new counterparty
         is_elevated = event.amount.value >= (binding.value_bands.elevated[0] or 15000)
         is_new_counterparty = history.prior_transactions == 0
 
-        # If elevated and suspicious or high value: Buy expensive SIM Swap probe (2 units)
         if (is_elevated or is_new_counterparty) and (units_spent + 2 <= budget):
-            sim_res = await self.camara.check_sim_swap(msisdn)
+            sim_sig = await self._call_signal(
+                "check_sim_swap", 0.35, 2,
+                lambda: self.camara.check_sim_swap(msisdn),
+                lambda d: not d.get("swapped", False),
+            )
             units_spent += 2
-            is_swapped = sim_res.get("swapped", False)
-            signals_collected.append(SignalResult(
-                name="check_sim_swap",
-                status="fail" if is_swapped else "pass",
-                weight=0.35,
-                cost_units=2,
-                details=sim_res
-            ))
+            signals_collected.append(sim_sig)
 
-            # If SIM was recently swapped, buy Location Verification (1 unit)
-            if is_swapped and units_spent + 1 <= budget:
-                loc_res = await self.camara.verify_location(msisdn, declared_loc)
+            # Buy Location Verification if the SIM swap signal fired OR
+            # came back uncertain — an unreadable swap signal on an
+            # elevated transaction is exactly when the next-cheapest
+            # corroborating check is worth its cost.
+            needs_location = sim_sig.status in ("fail", "uncertain")
+            if needs_location and units_spent + 1 <= budget:
+                loc_sig = await self._call_signal(
+                    "verify_location", 0.30, 1,
+                    lambda: self.camara.verify_location(msisdn, declared_loc),
+                    lambda d: d.get("match", False),
+                )
                 units_spent += 1
-                is_match = loc_res.get("match", False)
-                signals_collected.append(SignalResult(
-                    name="verify_location",
-                    status="pass" if is_match else "fail",
-                    weight=0.30,
-                    cost_units=1,
-                    details=loc_res
-                ))
+                signals_collected.append(loc_sig)
+
+        # ----------------------------------------------------
+        # Step 4: Identity corroboration for strict-appetite tenants
+        # ----------------------------------------------------
+        # A business that declared "strict" risk appetite (fintech/banking
+        # settlement, typically) is willing to spend the KYC check's 2 units
+        # even when the cheaper signals already agree, because identity
+        # misuse is the threat it's actually underwriting against.
+        wants_kyc = binding.risk_appetite == "strict" or "identity_misuse" in binding.declared_threats
+        if wants_kyc and units_spent + 2 <= budget:
+            declared_name = event.counterparty.declared_name or ""
+            kyc_sig = await self._call_signal(
+                "kyc_match", 0.25, 2,
+                lambda: self.camara.kyc_match(msisdn, declared_name),
+                lambda d: d.get("match_score", 0) >= 0.7,
+            )
+            units_spent += 2
+            signals_collected.append(kyc_sig)
 
         elapsed_ms = int((time.time() - start_time) * 1000) + 120  # simulate network roundtrip
 

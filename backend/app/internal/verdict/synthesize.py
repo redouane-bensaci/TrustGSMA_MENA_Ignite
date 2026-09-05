@@ -23,23 +23,33 @@ def synthesize_verdict(
     recent_sim_swap = False
     device_unreachable = False
     location_failed = False
+    any_signal_uncertain = False
 
     # 1. Weight accumulation
+    # An "uncertain" signal (the carrier call errored or timed out) is never
+    # treated as a pass — it costs a smaller, fixed penalty proportional to
+    # the signal's weight, and always drags final confidence down a notch.
+    # See app.internal.camara.tools.CamaraUnavailableError for the source.
     for sig in signals:
+        if sig.status == "uncertain":
+            any_signal_uncertain = True
+            base_score -= 15.0 * sig.weight
+            continue
+
         if sig.name == "verify_number":
             if sig.status == "pass":
                 base_score += 15.0
             elif sig.status == "fail":
                 base_score -= 40.0
                 number_check_failed = True
-        
+
         elif sig.name == "get_device_status":
             if sig.status == "pass":
                 base_score += 10.0
             elif sig.status == "fail":
                 base_score -= 35.0
                 device_unreachable = True
-                
+
         elif sig.name == "check_sim_swap":
             if sig.status == "pass":
                 base_score += 10.0
@@ -50,14 +60,14 @@ def synthesize_verdict(
                     recent_sim_swap = True
                 else:
                     base_score -= 20.0
-                    
+
         elif sig.name == "verify_location":
             if sig.status == "pass":
                 base_score += 10.0
             elif sig.status == "fail":
                 base_score -= 30.0
                 location_failed = True
-                
+
         elif sig.name == "kyc_match":
             if sig.status == "pass":
                 base_score += 15.0
@@ -101,6 +111,21 @@ def synthesize_verdict(
     else:
         decision = "REJECT"
         confidence = "high"
+
+    # Any unavailable-signal downgrades confidence one notch, regardless of
+    # decision band — the verdict may still be right, but it was reached
+    # with a gap in the evidence, and that must be visible to the caller.
+    if any_signal_uncertain:
+        confidence = "medium" if confidence == "high" else "low"
+        if not override_fired:
+            override_fired = "NOTE: One or more network signals were unavailable and scored as uncertainty, not as a pass"
+
+    # Budget exhaustion likewise downgrades confidence — the loop stopped
+    # because it ran out of units to spend, not because it was satisfied.
+    elif cost_units_spent >= budget_allocated and confidence == "high":
+        confidence = "medium"
+        if not override_fired:
+            override_fired = "NOTE: Cost budget exhausted before every available signal could be bought"
 
     # 4. Generate Machine Verdict
     machine_verdict = MachineVerdict(

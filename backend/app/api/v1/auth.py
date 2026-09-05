@@ -10,14 +10,19 @@ import uuid
 import hashlib
 from typing import Dict
 from fastapi import APIRouter, HTTPException, Header
-from app.schemas import SignupRequest, LoginRequest, AuthResponse, AuthUser
+from app.schemas import (
+    SignupRequest, LoginRequest, AuthResponse, AuthUser,
+    ApiKeyPair, KeyRotateRequest, BusinessBinding,
+)
 from app.api.v1.business_bindings import BINDINGS_DB
-from app.schemas import BusinessBinding
 
 router = APIRouter(prefix="/v1/auth", tags=["Auth"])
 
 def _hash_password(password: str) -> str:
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+def _generate_key(prefix: str) -> str:
+    return f"trust_{prefix}_{uuid.uuid4().hex}"
 
 
 # In-memory user + session stores (hackathon scope only), seeded with a demo
@@ -33,6 +38,14 @@ USERS_DB: Dict[str, dict] = {
     }
 }
 TOKENS_DB: Dict[str, str] = {}  # token -> user email
+
+# tenant_id -> {"live_key": ..., "test_key": ...}
+KEYS_DB: Dict[str, dict] = {
+    "bb_default_retail": {
+        "live_key": _generate_key("live"),
+        "test_key": _generate_key("test"),
+    }
+}
 
 
 def _issue_token(email: str) -> str:
@@ -73,6 +86,10 @@ async def signup(payload: SignupRequest):
         id=tenant_id,
         business_name=payload.business_name,
     )
+    KEYS_DB[tenant_id] = {
+        "live_key": _generate_key("live"),
+        "test_key": _generate_key("test"),
+    }
 
     token = _issue_token(payload.email)
     user = USERS_DB[payload.email]
@@ -93,6 +110,30 @@ async def login(payload: LoginRequest):
 async def me(authorization: str = Header(default="")):
     user = get_current_user(authorization)
     return AuthUser(**{k: user[k] for k in ("id", "email", "business_name", "tenant_id", "onboarded")})
+
+
+@router.get("/keys", response_model=ApiKeyPair)
+async def get_keys(authorization: str = Header(default="")):
+    user = get_current_user(authorization)
+    keys = KEYS_DB.setdefault(
+        user["tenant_id"], {"live_key": _generate_key("live"), "test_key": _generate_key("test")}
+    )
+    return ApiKeyPair(**keys)
+
+
+@router.post("/keys/rotate", response_model=ApiKeyPair)
+async def rotate_key(payload: KeyRotateRequest, authorization: str = Header(default="")):
+    """
+    Rotates the live or test key for the caller's tenant. The old key stops
+    validating immediately — there is no overlap window in this hackathon
+    build, so callers must swap the new key in before their next request.
+    """
+    user = get_current_user(authorization)
+    keys = KEYS_DB.setdefault(
+        user["tenant_id"], {"live_key": _generate_key("live"), "test_key": _generate_key("test")}
+    )
+    keys[f"{payload.key_type}_key"] = _generate_key(payload.key_type)
+    return ApiKeyPair(**keys)
 
 
 def mark_tenant_onboarded(tenant_id: str) -> None:

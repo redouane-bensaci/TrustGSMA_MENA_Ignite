@@ -104,3 +104,30 @@ class AuthUser(BaseModel):
 class AuthResponse(BaseModel):
     token: str
     user: AuthUser
+
+class ApiKeyPair(BaseModel):
+    live_key: str
+    test_key: str
+
+class KeyRotateRequest(BaseModel):
+    key_type: Literal["live", "test"] = "live"
+
+class WebhookRegisterRequest(BaseModel):
+    url: str
+    events: List[str] = ["verdict.created"]
+
+class Webhook(BaseModel):
+    id: str
+    tenant_id: str
+    url: str
+    events: List[str]
+    created_at: str
+
+class WebhookDelivery(BaseModel):
+    id: str
+    webhook_id: str
+    event: str
+    status: Literal["delivered", "failed", "pending"]
+    response_code: Optional[int] = None
+    attempted_at: str
+    payload_summary: str

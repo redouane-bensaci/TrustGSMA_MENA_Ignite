@@ -7,7 +7,7 @@ const NAV = [
   { to: '/dashboard/transactions', label: 'Transactions', tag: 'DEMO' },
   { to: '/dashboard/tools', label: 'Tool registry', tag: 'SITE' },
   { to: '/dashboard/api-keys', label: 'API keys', tag: 'SITE' },
-  { to: '/dashboard/webhooks', label: 'Webhooks', tag: 'LATER' },
+  { to: '/dashboard/webhooks', label: 'Webhooks', tag: 'SITE' },
   { to: '/dashboard/usage', label: 'Usage', tag: 'LATER' },
   { to: '/dashboard/settings', label: 'Settings', tag: 'SITE' },
 ]

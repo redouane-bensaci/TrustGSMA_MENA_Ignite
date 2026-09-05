@@ -53,6 +53,13 @@ export const api = {
   signup: (payload) => request('/v1/auth/signup', { method: 'POST', body: payload }),
   login: (payload) => request('/v1/auth/login', { method: 'POST', body: payload }),
   me: () => request('/v1/auth/me', { auth: true }),
+  getKeys: () => request('/v1/auth/keys', { auth: true }),
+  rotateKey: (keyType) => request('/v1/auth/keys/rotate', { method: 'POST', auth: true, body: { key_type: keyType } }),
+
+  // webhooks
+  listWebhooks: () => request('/v1/webhooks', { auth: true }),
+  registerWebhook: (url, events) => request('/v1/webhooks', { method: 'POST', auth: true, body: { url, events } }),
+  listDeliveries: (webhookId) => request(`/v1/webhooks/${webhookId}/deliveries`, { auth: true }),
 
   // business bindings
   listBindings: () => request('/v1/business-bindings'),

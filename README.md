@@ -89,7 +89,21 @@ graph TD
 ### The Three Override Rules (Deterministic Floor)
 1. **Rule 1:** A failed number verification caps the final score at 40, regardless of other passing checks.
 2. **Rule 2:** A SIM swap within 24 hours on an elevated or critical transaction caps the score at 44 (or 22 with location contradiction), forcing an automatic `HOLD` or `REJECT`.
-3. **Rule 3:** An unreachable device (`>30 days inactive`) with cross-tenant identity reuse triggers an immediate `REJECT`. Any unavailable check is scored as uncertainty, never as a pass.
+3. **Rule 3:** An unreachable device (`>30 days inactive`) with cross-tenant identity reuse triggers an immediate `REJECT`.
+
+### Unavailable-Signal Handling
+Every CAMARA call in `internal/agent/reason.py` goes through one choke point (`_call_signal`) that
+catches a carrier timeout/error (`CamaraUnavailableError`) and always emits a `SignalResult` with
+`status: "uncertain"` — never a silent pass. `internal/verdict/synthesize.py` penalizes uncertainty
+proportional to the signal's weight and downgrades `confidence` one notch, so the rule can't be
+missed on any one of the six tools. Exhausting the cost budget before every available signal is
+bought does the same. Trigger it in the sandbox with MSISDN `+213999000111`.
+
+### Webhook Delivery
+`POST /v1/verify` fires `verdict.created` to every webhook registered for the transaction's tenant
+as a FastAPI background task right after the response is built — delivery never adds latency to the
+verification call itself. Outcomes (delivered/failed, HTTP status, timestamp) are recorded per
+webhook and readable at `GET /v1/webhooks/{id}/deliveries`; a failed delivery is logged, not retried.
 
 ---
 
@@ -142,20 +156,21 @@ TrustGSMA_MENA_Ignite/
 │       ├── main.py                # FastAPI entrypoint (CORS, router mounts)
 │       ├── schemas.py             # Contracts: TransactionEvent, Binding, Verdict, Auth
 │       ├── api/v1/
-│       │   ├── auth.py            # POST /v1/auth/signup, /login, GET /me
+│       │   ├── auth.py            # signup/login/me + live/test API keys + key rotation
 │       │   ├── verify.py          # POST /v1/verify (core decision endpoint)
 │       │   ├── business_bindings.py # CRUD for tenant risk context
 │       │   ├── transactions.py    # Past verdict queries and replay
-│       │   └── tools.py           # Read-only public tool registry
+│       │   ├── tools.py           # Read-only public tool registry
+│       │   └── webhooks.py        # Register endpoints + real HTTP delivery + delivery logs
 │       └── internal/
 │           ├── agent/
-│           │   └── reason.py      # AI Reasoning loop with budget enforcement
+│           │   └── reason.py      # Reasoning loop: budget enforcement + unavailable-signal handling
 │           ├── camara/
-│           │   └── tools.py       # Nokia NaC CAMARA client wrappers
+│           │   └── tools.py       # Nokia NaC CAMARA client wrappers (+ simulated carrier timeout)
 │           ├── history/
 │           │   └── ledger.py      # Independent counterparty ledger
 │           └── verdict/
-│               └── synthesize.py  # Signal weights & deterministic floor
+│               └── synthesize.py  # Signal weights, deterministic floor, uncertainty penalty
 │
 └── scenarios/
     ├── scenario_a_routine.json    # Benchmark A: Routine payroll

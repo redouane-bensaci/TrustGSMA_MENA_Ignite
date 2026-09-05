@@ -3,7 +3,7 @@ POST /v1/verify - Core Decision Endpoint
 """
 import uuid
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from app.schemas import TransactionEvent, VerifyResponse
 from app.internal.camara.tools import CamaraClient
 from app.internal.history.ledger import lookup_counterparty
@@ -19,7 +19,7 @@ agent = TrustAgent(camara_client)
 VERIFIED_TRANSACTIONS = []
 
 @router.post("/verify", response_model=VerifyResponse)
-async def verify_transaction(event: TransactionEvent):
+async def verify_transaction(event: TransactionEvent, background_tasks: BackgroundTasks):
     """
     Main verification entrypoint:
     1. Fetches server-side business binding context
@@ -27,6 +27,7 @@ async def verify_transaction(event: TransactionEvent):
     3. Runs autonomous AI agent reasoning loop under cost budget
     4. Applies deterministic override floor
     5. Returns machine verdict and merchant instructions
+    6. Fires any registered webhooks in the background (never blocks the response)
     """
     binding_id = event.business_binding_id or "bb_default_retail"
     binding = get_binding_by_id(binding_id)
@@ -60,5 +61,8 @@ async def verify_transaction(event: TransactionEvent):
         "response": response.dict(),
         "timestamp": now_iso
     })
+
+    from app.api.v1.webhooks import deliver_verdict
+    background_tasks.add_task(deliver_verdict, binding_id, tx_id, machine_verdict.dict())
 
     return response

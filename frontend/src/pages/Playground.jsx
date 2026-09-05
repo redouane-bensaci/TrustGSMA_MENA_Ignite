@@ -188,8 +188,9 @@ export default function Playground() {
             </button>
 
             <p className="text-xs leading-relaxed text-ink/45">
-              Try <code className="text-ink/60">+213661448899</code> (recent SIM swap) or{' '}
-              <code className="text-ink/60">+213770990011</code> (cross-tenant reuse) to see it escalate.
+              Try <code className="text-ink/60">+213661448899</code> (recent SIM swap),{' '}
+              <code className="text-ink/60">+213770990011</code> (cross-tenant reuse), or{' '}
+              <code className="text-ink/60">+213999000111</code> (carrier signals unavailable) to see it escalate.
             </p>
           </form>
 
@@ -234,8 +235,13 @@ export default function Playground() {
                         <span
                           className="rounded-sm px-2 py-0.5 text-[10px] font-semibold tracking-[0.06em]"
                           style={{
-                            background: s.status === 'pass' ? 'rgba(143,191,159,0.16)' : 'rgba(178,58,42,0.2)',
-                            color: s.status === 'pass' ? '#8fbf9f' : '#e8877a',
+                            background:
+                              s.status === 'pass'
+                                ? 'rgba(143,191,159,0.16)'
+                                : s.status === 'uncertain'
+                                  ? 'rgba(216,178,90,0.18)'
+                                  : 'rgba(178,58,42,0.2)',
+                            color: s.status === 'pass' ? '#8fbf9f' : s.status === 'uncertain' ? '#d8b25a' : '#e8877a',
                           }}
                         >
                           {s.status.toUpperCase()}

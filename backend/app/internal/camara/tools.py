@@ -62,25 +62,49 @@ TOOL_REGISTRY: Dict[str, ToolMetadata] = {
     )
 }
 
+class CamaraUnavailableError(Exception):
+    """
+    Raised when a CAMARA/NaC call errors out or times out at the carrier.
+    The agent must never treat this as a silent pass — see
+    app.internal.verdict.synthesize for how "uncertain" signals are scored.
+    """
+    def __init__(self, tool_id: str, reason: str):
+        self.tool_id = tool_id
+        self.reason = reason
+        super().__init__(f"{tool_id} unavailable: {reason}")
+
+
 class CamaraClient:
     """Interface to Nokia Network as Code sandbox with built-in scenario simulation."""
-    
+
+    # MSISDN substring -> forces every call for that number to raise
+    # CamaraUnavailableError, so the "signal unavailable" path stays
+    # exercisable and demoable without a live carrier outage.
+    UNAVAILABLE_TRIGGER = "999000111"
+
     def __init__(self, api_key: str = "mock_key", base_url: str = "https://mock.nac.nokia.com"):
         self.api_key = api_key
         self.base_url = base_url
 
+    def _maybe_fail(self, tool_id: str, msisdn: str) -> None:
+        if self.UNAVAILABLE_TRIGGER in msisdn:
+            raise CamaraUnavailableError(tool_id, "carrier_timeout")
+
     async def verify_number(self, msisdn: str) -> Dict[str, Any]:
+        self._maybe_fail("verify_number", msisdn)
         # Malicious number in scenario C has no active auth context
         if "770990011" in msisdn:
             return {"verified": False, "reason": "no_active_authentication_context", "carrier": "Djezzy"}
         return {"verified": True, "carrier": "Mobilis", "attestation_level": 0.99}
 
     async def get_device_status(self, msisdn: str) -> Dict[str, Any]:
+        self._maybe_fail("get_device_status", msisdn)
         if "770990011" in msisdn:
             return {"reachable": False, "roaming": False, "last_seen": "> 30 days"}
         return {"reachable": True, "roaming": False, "last_seen": "active_now"}
 
     async def check_sim_swap(self, msisdn: str, max_age_hours: int = 168) -> Dict[str, Any]:
+        self._maybe_fail("check_sim_swap", msisdn)
         # Scenario B: SIM swapped 6-14h ago
         if "661448899" in msisdn:
             return {
@@ -94,6 +118,7 @@ class CamaraClient:
         return {"swapped": False, "latest_swap_at": None, "swap_hours": None}
 
     async def verify_location(self, msisdn: str, declared_cell: str) -> Dict[str, Any]:
+        self._maybe_fail("verify_location", msisdn)
         # Scenario B: User declared Oran (31-ORN) while SIM is 412 km away in Algiers (16-ALG)
         if "661448899" in msisdn and declared_cell == "31-ORN":
             return {
@@ -111,11 +136,13 @@ class CamaraClient:
         }
 
     async def kyc_match(self, msisdn: str, declared_name: str) -> Dict[str, Any]:
+        self._maybe_fail("kyc_match", msisdn)
         if "770990011" in msisdn:
             return {"match_score": 0.12, "name_match": False, "id_match": False}
         return {"match_score": 0.96, "name_match": True, "status": "verified_contract"}
 
     async def check_number_recycling(self, msisdn: str, days: int = 180) -> Dict[str, Any]:
+        self._maybe_fail("check_number_recycling", msisdn)
         if "770990011" in msisdn:
             return {"recycled": True, "recycled_date": "94 days ago"}
         return {"recycled": False, "recycled_date": None}
