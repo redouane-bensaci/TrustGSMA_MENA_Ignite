@@ -210,7 +210,7 @@ class CamaraClient:
 
     async def _mock_verify_location(self, msisdn: str, declared_cell: str) -> Dict[str, Any]:
         self._maybe_fail("verify_location", msisdn)
-        if "661448899" in msisdn and declared_cell == "31-ORN":
+        if ("661448899" in msisdn or self.SIM_SWAPPED_NUMBER in msisdn) and declared_cell == "31-ORN":
             return {
                 "match": False,
                 "serving_cell": "16-ALG",

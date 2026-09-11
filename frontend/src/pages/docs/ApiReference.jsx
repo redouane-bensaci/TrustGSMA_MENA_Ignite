@@ -25,8 +25,13 @@ const ENDPOINTS = [
       {
         method: 'POST',
         path: '/v1/verify',
-        desc: 'The core decision endpoint. Body is the transaction event only — amount, currency, counterparty, channel, idempotency key. Business binding and counterparty history are fetched server-side, never accepted from the caller.',
+        desc: 'The core decision endpoint. Body is the transaction event only — amount, currency, counterparty (msisdn, declared_name, declared_location), channel, idempotency key. Business binding and counterparty history are fetched server-side, never accepted from the caller. Returns the machine verdict, a merchant instruction, and the counterparty_history the agent actually reasoned from.',
         highlight: true,
+      },
+      {
+        method: 'GET',
+        path: '/v1/counterparty-history/{msisdn}',
+        desc: 'The same anti-tampering history lookup the agent uses internally, exposed read-only — preview what evidence an MSISDN carries before running a full verification.',
       },
     ],
   },
