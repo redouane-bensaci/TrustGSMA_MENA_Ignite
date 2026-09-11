@@ -54,6 +54,13 @@ class SignalResult(BaseModel):
     weight: float
     cost_units: int
     details: Dict[str, Any] = {}
+    # The agent's own one-sentence justification for spending the budget on
+    # this signal, captured at the moment it decided to buy it — this is
+    # internal reasoning about *cost/what-to-check*, kept separate from the
+    # final verdict and from the plain-language explanation shown to the
+    # merchant (see app.internal.agent.explain). None for signals bought by
+    # the fixed (non-LLM) decision tree that don't narrate themselves.
+    agent_reason: Optional[str] = None
 
 class MachineVerdict(BaseModel):
     decision: Literal["APPROVE", "REVIEW", "HOLD", "REJECT"]
@@ -76,6 +83,13 @@ class VerifyResponse(BaseModel):
     verdict: MachineVerdict
     merchant_instruction: MerchantInstruction
     timestamp: str
+    # The server-side counterparty history the agent actually saw for this
+    # MSISDN — looked up independently of the caller (see
+    # app.internal.history.ledger) so it can never be spoofed by the
+    # request. Returned here so a caller (or the Playground) can confirm
+    # what evidence the agent was actually reasoning from, separate from
+    # the network signals it chose to buy.
+    counterparty_history: CounterpartyHistory
 
 class ToolMetadata(BaseModel):
     id: str

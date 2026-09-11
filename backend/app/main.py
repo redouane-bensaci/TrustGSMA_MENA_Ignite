@@ -10,6 +10,7 @@ from app.api.v1.transactions import router as transactions_router
 from app.api.v1.tools import router as tools_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.webhooks import router as webhooks_router
+from app.api.v1.number_verification import router as number_verification_router
 
 app = FastAPI(
     title="TRUST · Real-time Mobile Network Verification API",
@@ -36,6 +37,7 @@ app.include_router(transactions_router)
 app.include_router(tools_router)
 app.include_router(auth_router)
 app.include_router(webhooks_router)
+app.include_router(number_verification_router)
 
 @app.get("/")
 async def health_check():

@@ -69,6 +69,7 @@ export const api = {
 
   // verify / transactions
   verify: (payload) => request('/v1/verify', { method: 'POST', body: payload }),
+  getCounterpartyHistory: (msisdn) => request(`/v1/counterparty-history/${encodeURIComponent(msisdn)}`),
   listTransactions: (query) => request('/v1/transactions', { query }),
   getTransaction: (id) => request(`/v1/transactions/${id}`),
 

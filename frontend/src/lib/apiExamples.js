@@ -4,12 +4,13 @@ export const VERIFY_CURL = `curl -X POST http://localhost:8000/v1/verify \\
     "event_type": "transfer",
     "amount": { "value": 184000, "currency": "DZD" },
     "counterparty": {
-      "msisdn": "+213661448899",
+      "msisdn": "+99999991000",
+      "declared_name": "Yacine Mansouri",
       "declared_location": { "cell": "31-ORN" }
     },
     "channel": "api",
     "idempotency_key": "idem_9f21a4",
-    "business_binding_id": "bb_default_retail"
+    "business_binding_id": "bb_ecommerce_store_02"
   }'`
 
 export const VERIFY_RESPONSE = `{
@@ -17,25 +18,33 @@ export const VERIFY_RESPONSE = `{
   "idempotency_key": "idem_9f21a4",
   "verdict": {
     "decision": "HOLD",
-    "score": 22,
+    "score": 25,
     "confidence": "high",
     "signals": [
       { "name": "verify_number", "status": "pass", "weight": 0.40, "cost_units": 1 },
       { "name": "get_device_status", "status": "pass", "weight": 0.20, "cost_units": 1 },
-      { "name": "check_sim_swap", "status": "fail", "weight": 0.35, "cost_units": 2 },
-      { "name": "verify_location", "status": "fail", "weight": 0.30, "cost_units": 1 }
+      { "name": "check_sim_swap", "status": "fail", "weight": 0.35, "cost_units": 2, "details": { "swap_hours": 14 } },
+      { "name": "verify_location", "status": "fail", "weight": 0.30, "cost_units": 1, "details": { "delta_km": 412 } }
     ],
     "cost_units_spent": 5,
     "budget_allocated": 8,
-    "latency_ms": 612,
-    "override_rule_fired": "RULE_2: Recent SIM swap under 24h on high-exposure event forces HOLD/REJECT"
+    "latency_ms": 120,
+    "override_rule_fired": null
   },
   "merchant_instruction": {
     "summary": "High risk detected: recent SIM swap combined with location or transaction anomaly.",
-    "recommended_action": "Do not dispatch goods or release funds.",
+    "recommended_action": "Do not dispatch goods or release funds. Contact the verified customer via a secondary confirmed channel.",
     "headline_badge": "HOLD · DO NOT DISPATCH"
   },
-  "timestamp": "2026-09-05T02:14:08.331Z"
+  "timestamp": "2026-09-11T16:22:57.008Z",
+  "counterparty_history": {
+    "msisdn": "+99999991000",
+    "first_seen": "6 hours ago",
+    "prior_transactions": 0,
+    "prior_verdicts": [],
+    "msisdn_seen_across_tenants": 1,
+    "portable_trust_score": 0.11
+  }
 }`
 
 export const BUSINESS_BINDING_CURL = `curl -X POST http://localhost:8000/v1/business-bindings \\

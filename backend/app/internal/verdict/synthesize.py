@@ -3,7 +3,33 @@ Verdict Synthesizer & Deterministic Safety Floor
 Calculates composite risk score and applies immutable guardrails overriding the AI model.
 """
 from typing import List, Tuple, Optional
-from app.schemas import SignalResult, MachineVerdict, MerchantInstruction, BusinessBinding
+from app.schemas import SignalResult, MachineVerdict, MerchantInstruction, BusinessBinding, CounterpartyHistory
+
+# A merchant's declared `risk_appetite` shifts where the same composite
+# score lands on the decision band — it never touches the score itself
+# (that stays purely evidence-driven), and it never overrides Rules 1-3
+# below (those are an immutable floor regardless of policy). A "strict"
+# fintech tenant demands a much higher score to auto-approve and drops to
+# HOLD much sooner than a lenient one; the reverse identity+amount can
+# legitimately clear one tenant and get held at another.
+STRICT_THRESHOLDS = {"approve": 90, "review": 82, "hold": 50}
+MODERATE_THRESHOLDS = {"approve": 80, "review": 45, "hold": 20}
+LENIENT_THRESHOLDS = {"approve": 40, "review": 25, "hold": 10}
+
+
+def _decision_thresholds(binding: BusinessBinding, amount_value: float) -> dict:
+    appetite = binding.risk_appetite
+    if appetite == "strict":
+        return STRICT_THRESHOLDS
+    if appetite == "conservative_above_elevated":
+        # Lenient at everyday amounts, but tightens to the strict band once
+        # the transaction crosses into this tenant's own elevated exposure.
+        elevated_floor = binding.value_bands.elevated[0] or 15000
+        return STRICT_THRESHOLDS if amount_value >= elevated_floor else LENIENT_THRESHOLDS
+    # "moderate" and any unrecognized appetite fall back to the original,
+    # unshifted decision bands.
+    return MODERATE_THRESHOLDS
+
 
 def synthesize_verdict(
     signals: List[SignalResult],
@@ -12,7 +38,8 @@ def synthesize_verdict(
     budget_allocated: int,
     cost_units_spent: int,
     latency_ms: int,
-    cross_tenant_count: int = 1
+    cross_tenant_count: int = 1,
+    history: Optional[CounterpartyHistory] = None,
 ) -> Tuple[MachineVerdict, MerchantInstruction]:
     """
     Computes final verdict from collected network signals with deterministic overrides.
@@ -24,16 +51,18 @@ def synthesize_verdict(
     device_unreachable = False
     location_failed = False
     any_signal_uncertain = False
+    uncertain_count = 0
 
+    # A carrier declining to answer at all is not a neutral non-result — an
+    # unreachable/unresponsive signal is itself a pattern real fraud tooling
+    # produces deliberately (burner lines, blocked numbers, farmed SIMs), so
+    # it is weighted as a genuine red flag rather than a minor shrug.
     # 1. Weight accumulation
-    # An "uncertain" signal (the carrier call errored or timed out) is never
-    # treated as a pass — it costs a smaller, fixed penalty proportional to
-    # the signal's weight, and always drags final confidence down a notch.
-    # See app.internal.camara.tools.CamaraUnavailableError for the source.
     for sig in signals:
         if sig.status == "uncertain":
             any_signal_uncertain = True
-            base_score -= 15.0 * sig.weight
+            uncertain_count += 1
+            base_score -= 30.0 * sig.weight
             continue
 
         if sig.name == "verify_number":
@@ -78,6 +107,28 @@ def synthesize_verdict(
     if cross_tenant_count >= 3:
         base_score -= 35.0
 
+    # A second (or later) uncertain signal is not "more of the same" — it
+    # means the carrier could not corroborate the transaction on any front
+    # the agent tried, which is a materially stronger red flag than one
+    # isolated gap in the evidence.
+    if uncertain_count >= 2:
+        base_score -= 20.0
+
+    # Uncertainty is far more suspicious layered on a shaky counterparty
+    # than on an established, clean one — a brand-new counterparty, one
+    # already flagged across tenants, or one with a HOLD/REJECT on record,
+    # combined with a signal the carrier wouldn't corroborate, reads as
+    # evasion rather than bad luck.
+    history_is_suspicious = bool(
+        history and (
+            history.prior_transactions == 0
+            or history.msisdn_seen_across_tenants >= 2
+            or any(v in ("HOLD", "REJECT") for v in history.prior_verdicts)
+        )
+    )
+    if any_signal_uncertain and history_is_suspicious:
+        base_score -= 20.0
+
     # 2. Apply Deterministic Floor Overrides
     score = int(max(0, min(100, round(base_score))))
 
@@ -98,14 +149,17 @@ def synthesize_verdict(
         score = 6
         override_fired = "RULE_3: Unreachable device with multi-tenant reuse triggers immediate REJECT"
 
-    # 3. Determine decision band
-    if score >= 80:
+    # 3. Determine decision band — shifted by this merchant's declared risk
+    # appetite (see _decision_thresholds). The score computed above is
+    # identical regardless of policy; only where it lands on the band moves.
+    thresholds = _decision_thresholds(binding, amount_value)
+    if score >= thresholds["approve"]:
         decision = "APPROVE"
         confidence = "high"
-    elif score >= 45:
+    elif score >= thresholds["review"]:
         decision = "REVIEW"
         confidence = "medium"
-    elif score >= 20:
+    elif score >= thresholds["hold"]:
         decision = "HOLD"
         confidence = "high"
     else:
@@ -114,18 +168,20 @@ def synthesize_verdict(
 
     # Any unavailable-signal downgrades confidence one notch, regardless of
     # decision band — the verdict may still be right, but it was reached
-    # with a gap in the evidence, and that must be visible to the caller.
+    # with a gap in the evidence. This is reflected in `confidence` alone;
+    # it deliberately does NOT set `override_rule_fired` — that field is
+    # reserved for the three immutable safety-floor rules above, which the
+    # UI presents as an alarming, singled-out callout. A carrier signal
+    # simply being unavailable is routine and not a rule firing, so it must
+    # never be presented to a merchant with the same urgency as a REJECT.
     if any_signal_uncertain:
         confidence = "medium" if confidence == "high" else "low"
-        if not override_fired:
-            override_fired = "NOTE: One or more network signals were unavailable and scored as uncertainty, not as a pass"
 
-    # Budget exhaustion likewise downgrades confidence — the loop stopped
-    # because it ran out of units to spend, not because it was satisfied.
+    # Budget exhaustion likewise downgrades confidence only — the loop
+    # stopped because it ran out of units to spend, not because a rule cut
+    # it short.
     elif cost_units_spent >= budget_allocated and confidence == "high":
         confidence = "medium"
-        if not override_fired:
-            override_fired = "NOTE: Cost budget exhausted before every available signal could be bought"
 
     # 4. Generate Machine Verdict
     machine_verdict = MachineVerdict(
