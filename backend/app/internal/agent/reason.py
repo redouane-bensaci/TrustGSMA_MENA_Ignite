@@ -34,12 +34,19 @@ class TrustAgent:
         cost_units: int,
         call: Callable[[], Awaitable[dict]],
         pass_check: Callable[[dict], bool],
+        agent_reason: str | None = None,
     ) -> SignalResult:
         """
         Runs one CAMARA tool call and always returns a SignalResult — pass,
         fail, or (if the carrier call errors/times out) uncertain. This is
         the single choke point every one of the six tools goes through, so
         an unavailable signal can never be silently scored as a pass.
+
+        `agent_reason` is a short, fixed note on *why the fixed decision
+        tree chose to spend the budget on this signal* — the non-LLM
+        equivalent of the reasoning the LLM agent narrates for itself, kept
+        separate from the final verdict and from the plain-language
+        merchant explanation.
         """
         try:
             details = await call()
@@ -50,6 +57,7 @@ class TrustAgent:
                 weight=weight,
                 cost_units=cost_units,
                 details={"error": exc.reason, "tool": exc.tool_id},
+                agent_reason=agent_reason,
             )
         return SignalResult(
             name=name,
@@ -57,6 +65,7 @@ class TrustAgent:
             weight=weight,
             cost_units=cost_units,
             details=details,
+            agent_reason=agent_reason,
         )
 
     async def execute_reasoning_loop(
@@ -81,6 +90,7 @@ class TrustAgent:
                 "verify_number", 0.40, 1,
                 lambda: self.camara.verify_number(msisdn),
                 lambda d: d.get("verified", False),
+                agent_reason="Cheapest, highest-signal probe — always worth buying first.",
             )
             units_spent += 1
             signals_collected.append(sig)
@@ -93,6 +103,7 @@ class TrustAgent:
                 "get_device_status", 0.20, 1,
                 lambda: self.camara.get_device_status(msisdn),
                 lambda d: d.get("reachable", False),
+                agent_reason="Second cheap probe — catches a dead/emulated handset early.",
             )
             units_spent += 1
             signals_collected.append(sig)
@@ -106,6 +117,7 @@ class TrustAgent:
                     "check_number_recycling", 0.25, 1,
                     lambda: self.camara.check_number_recycling(msisdn),
                     lambda d: not d.get("recycled", False),
+                    agent_reason="Both cheap probes came back non-passing — checking whether this is simply a reassigned number.",
                 )
                 units_spent += 1
                 signals_collected.append(sig)
@@ -121,6 +133,11 @@ class TrustAgent:
                 "check_sim_swap", 0.35, 2,
                 lambda: self.camara.check_sim_swap(msisdn),
                 lambda d: not d.get("swapped", False),
+                agent_reason=(
+                    "Elevated amount and/or a first-time counterparty — worth the 2 units to rule out account takeover."
+                    if is_elevated else
+                    "First-time counterparty — worth the 2 units to rule out account takeover."
+                ),
             )
             units_spent += 2
             signals_collected.append(sim_sig)
@@ -135,24 +152,56 @@ class TrustAgent:
                     "verify_location", 0.30, 1,
                     lambda: self.camara.verify_location(msisdn, declared_loc),
                     lambda d: d.get("match", False),
+                    agent_reason="SIM swap signal was not a clean pass — corroborating with device location before deciding.",
                 )
                 units_spent += 1
                 signals_collected.append(loc_sig)
 
         # ----------------------------------------------------
-        # Step 4: Identity corroboration for strict-appetite tenants
+        # Step 4: Identity corroboration — strict-appetite tenants, or an
+        # unreachable/uncertain signal on a counterparty whose history
+        # already looks shaky
         # ----------------------------------------------------
         # A business that declared "strict" risk appetite (fintech/banking
         # settlement, typically) is willing to spend the KYC check's 2 units
         # even when the cheaper signals already agree, because identity
         # misuse is the threat it's actually underwriting against.
-        wants_kyc = binding.risk_appetite == "strict" or "identity_misuse" in binding.declared_threats
+        #
+        # Separately: a carrier that couldn't answer at all (uncertain) is
+        # itself a red flag, not a neutral non-result — and that flag is far
+        # more serious layered on a counterparty who is brand new, already
+        # flagged across other tenants, or has a HOLD/REJECT on record. Any
+        # agent, regardless of the merchant's declared appetite, escalates
+        # to the identity check in that combination rather than letting an
+        # unreadable signal and a shaky history quietly cancel each other out.
+        any_uncertain_so_far = any(s.status == "uncertain" for s in signals_collected)
+        history_is_suspicious = (
+            history.prior_transactions == 0
+            or history.msisdn_seen_across_tenants >= 2
+            or any(v in ("HOLD", "REJECT") for v in history.prior_verdicts)
+        )
+        wants_kyc = (
+            binding.risk_appetite == "strict"
+            or "identity_misuse" in binding.declared_threats
+            or (any_uncertain_so_far and history_is_suspicious)
+        )
         if wants_kyc and units_spent + 2 <= budget:
             declared_name = event.counterparty.declared_name or ""
+            if any_uncertain_so_far and history_is_suspicious:
+                kyc_reason = (
+                    "A signal came back uncertain and this counterparty's own history already looks shaky — "
+                    "escalating to identity corroboration rather than letting the two gaps cancel out."
+                )
+            else:
+                kyc_reason = (
+                    "This merchant's risk policy treats identity misuse as a declared threat — worth confirming "
+                    "the declared name against the carrier record."
+                )
             kyc_sig = await self._call_signal(
                 "kyc_match", 0.25, 2,
                 lambda: self.camara.kyc_match(msisdn, declared_name),
                 lambda d: d.get("match_score", 0) >= 0.7,
+                agent_reason=kyc_reason,
             )
             units_spent += 2
             signals_collected.append(kyc_sig)
@@ -169,5 +218,6 @@ class TrustAgent:
             budget_allocated=budget,
             cost_units_spent=units_spent,
             latency_ms=elapsed_ms,
-            cross_tenant_count=history.msisdn_seen_across_tenants
+            cross_tenant_count=history.msisdn_seen_across_tenants,
+            history=history,
         )
