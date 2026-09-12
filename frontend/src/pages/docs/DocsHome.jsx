@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 const LINKS = [
   { to: '/docs/quickstart', title: 'Quickstart', desc: 'Copy-paste curl example, get your first verdict in under a minute.' },
   { to: '/docs/api-reference', title: 'API reference', desc: 'Every endpoint your frontend and integrators actually call.' },
-  { to: '/docs/tools', title: 'Tool registry', desc: 'The six CAMARA network tools TRUST is allowed to call, in plain language.' },
+  { to: '/docs/tools', title: 'Tool registry', desc: 'The seven CAMARA network tools TRUST is allowed to call, in plain language.' },
 ]
 
 export default function DocsHome() {

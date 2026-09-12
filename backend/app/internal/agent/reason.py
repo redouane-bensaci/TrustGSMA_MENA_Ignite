@@ -39,7 +39,7 @@ class TrustAgent:
         """
         Runs one CAMARA tool call and always returns a SignalResult — pass,
         fail, or (if the carrier call errors/times out) uncertain. This is
-        the single choke point every one of the six tools goes through, so
+        the single choke point every one of the seven tools goes through, so
         an unavailable signal can never be silently scored as a pass.
 
         `agent_reason` is a short, fixed note on *why the fixed decision
@@ -80,7 +80,10 @@ class TrustAgent:
         signals_collected: List[SignalResult] = []
 
         msisdn = event.counterparty.msisdn
-        declared_loc = event.counterparty.declared_location.cell if event.counterparty.declared_location else "16-ALG"
+        declared = event.counterparty.declared_location
+        declared_loc = declared.cell if declared else "16-ALG"
+        declared_lat = declared.latitude if declared else None
+        declared_lon = declared.longitude if declared else None
 
         # ----------------------------------------------------
         # Step 1: Base cheap check (Number verification - 1 unit)
@@ -150,12 +153,44 @@ class TrustAgent:
             if needs_location and units_spent + 1 <= budget:
                 loc_sig = await self._call_signal(
                     "verify_location", 0.30, 1,
-                    lambda: self.camara.verify_location(msisdn, declared_loc),
+                    lambda: self.camara.verify_location(msisdn, declared_loc, declared_lat, declared_lon),
                     lambda d: d.get("match", False),
                     agent_reason="SIM swap signal was not a clean pass — corroborating with device location before deciding.",
                 )
                 units_spent += 1
                 signals_collected.append(loc_sig)
+
+                # Verification only answers yes/no against the declared
+                # area. When it says "no" — or couldn't answer at all —
+                # the remaining question is *how far off* the handset
+                # actually is, which is what retrieval answers: a customer
+                # one street outside the delivery radius and a handset in
+                # another wilaya both fail verification identically.
+                # Worth the extra 2 units only on an elevated exposure,
+                # where that distinction changes the decision.
+                # Only worth buying when a declared coordinate exists to
+                # measure against — without one, retrieval returns a
+                # position with nothing to compare it to, which can never
+                # corroborate the transaction and would just burn 2 units
+                # on a guaranteed non-pass.
+                can_measure = declared_lat is not None and declared_lon is not None
+                if (
+                    can_measure
+                    and loc_sig.status in ("fail", "uncertain")
+                    and is_elevated
+                    and units_spent + 2 <= budget
+                ):
+                    retrieval_sig = await self._call_signal(
+                        "retrieve_location", 0.30, 2,
+                        lambda: self.camara.retrieve_location(msisdn, declared_lat, declared_lon),
+                        lambda d: (not d.get("stale", False)) and d.get("within_declared_area", False),
+                        agent_reason=(
+                            "Location verification did not clear — pulling the device's actual position so the "
+                            "size of the discrepancy, not just its existence, drives the decision."
+                        ),
+                    )
+                    units_spent += 2
+                    signals_collected.append(retrieval_sig)
 
         # ----------------------------------------------------
         # Step 4: Identity corroboration — strict-appetite tenants, or an

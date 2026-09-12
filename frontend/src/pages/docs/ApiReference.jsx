@@ -44,7 +44,7 @@ const ENDPOINTS = [
   },
   {
     group: 'Tool registry',
-    routes: [{ method: 'GET', path: '/v1/tools', desc: 'Read-only list of the six CAMARA tools available to the agent.' }],
+    routes: [{ method: 'GET', path: '/v1/tools', desc: 'Read-only list of the seven CAMARA tools available to the agent.' }],
   },
 ]
 

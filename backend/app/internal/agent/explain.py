@@ -26,10 +26,17 @@ logger = logging.getLogger("trust.explain")
 # Anything else in a signal's `details` (carrier name, exact carrier
 # ticket numbers, raw match scores tied to a specific person, etc.) is
 # dropped before it ever reaches the prompt.
+# NOTE on location retrieval: `delta_km`, `within_declared_area`,
+# `accuracy_m` and `stale` are coarse, non-identifying derivations and are
+# safe to send. The raw `latitude`/`longitude`/`serving_cell` the
+# retrieval signal returns are a precise physical location for a real
+# person and are deliberately NOT listed here, so they never reach the
+# model — the narrative only ever learns "X km away", never where.
 _SAFE_DETAIL_KEYS = {
     "swapped", "swap_hours", "match", "travel_plausible", "delta_km",
     "recycled", "reachable", "roaming", "verified", "recycled_date",
     "verification_result", "match_rate",
+    "within_declared_area", "accuracy_m", "stale",
 }
 
 

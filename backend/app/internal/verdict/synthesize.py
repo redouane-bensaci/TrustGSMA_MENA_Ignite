@@ -97,6 +97,25 @@ def synthesize_verdict(
                 base_score -= 30.0
                 location_failed = True
 
+        elif sig.name == "retrieve_location":
+            if sig.status == "pass":
+                base_score += 10.0
+            elif sig.status == "fail":
+                # Retrieval reports the actual distance, so — unlike the
+                # yes/no verification signal — the penalty can be
+                # proportionate to how far off the handset really is. A
+                # stale or missing fix is scored like a moderate gap: it
+                # is not proof of a mismatch, but it is not corroboration
+                # either. Anything beyond ~100 km is a different city and
+                # is treated as severely as a failed verification.
+                if sig.details.get("stale"):
+                    base_score -= 20.0
+                    location_failed = True
+                else:
+                    delta_km = sig.details.get("delta_km") or 0
+                    base_score -= 35.0 if delta_km >= 100 else 20.0
+                    location_failed = True
+
         elif sig.name == "kyc_match":
             if sig.status == "pass":
                 base_score += 15.0
@@ -137,11 +156,20 @@ def synthesize_verdict(
         score = 40
         override_fired = "RULE_1: Number verification failure caps score at 40"
 
-    # Rule 2: SIM swap under 24h on elevated/critical caps at 45 (forces HOLD/REVIEW)
+    # Rule 2: SIM swap under 24h on elevated/critical caps the score
+    # (forces HOLD/REJECT). The cap only ever lowers a score — evidence
+    # that already drove it below the cap keeps its lower value — but the
+    # rule is still *recorded as fired* whenever its conditions are met.
+    # Gating the whole branch on `score > cap` meant the opposite: the
+    # rule announced itself on the mildest case (a swap with every other
+    # signal clean, capped 75 -> 44) and stayed silent on the severe one
+    # (a swap plus a failed location check, already at 25), so the
+    # merchant-facing callout was missing from exactly the transactions it
+    # exists to flag.
     critical_threshold = binding.value_bands.critical[0] or 60000
     is_high_exposure = amount_value >= critical_threshold
-    if recent_sim_swap and is_high_exposure and score > 44:
-        score = 22 if location_failed else 44
+    if recent_sim_swap and is_high_exposure:
+        score = min(score, 22 if location_failed else 44)
         override_fired = "RULE_2: Recent SIM swap under 24h on high-exposure event forces HOLD/REJECT"
 
     # Rule 3: Malicious device farm / dark SIM rejection

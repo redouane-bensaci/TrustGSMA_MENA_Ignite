@@ -16,6 +16,11 @@ const DEFAULTS = {
   msisdn: '+213661112233',
   declaredName: '',
   cell: '16-ALG',
+  // Declared coordinates are optional, but supplying them is what lets the
+  // agent buy Location Retrieval — it needs a point to measure the
+  // device's actual position against. 16-ALG = central Algiers.
+  latitude: 36.7372,
+  longitude: 3.0865,
   channel: 'playground',
   eventType: 'transfer',
 }
@@ -33,6 +38,8 @@ const SCENARIOS = [
       msisdn: '+99999991001',
       declaredName: 'Amine Hadj',
       cell: '16-ALG',
+      latitude: 36.7372,
+      longitude: 3.0865,
       channel: 'playground',
       eventType: 'transfer',
     },
@@ -49,6 +56,12 @@ const SCENARIOS = [
       msisdn: '+99999991000',
       declaredName: 'Yacine Mansouri',
       cell: '31-ORN',
+      // Deliberately no coordinates: this scenario is the SIM-swap HOLD
+      // story, decided on cell-level evidence alone. Scenario G is the
+      // same counterparty *with* coordinates, which lets the agent buy
+      // Location Retrieval and push the same case past HOLD into REJECT.
+      latitude: '',
+      longitude: '',
       channel: 'playground',
       eventType: 'transfer',
     },
@@ -65,6 +78,8 @@ const SCENARIOS = [
       msisdn: '+213770990011',
       declaredName: 'Karim Benali',
       cell: '25-CST',
+      latitude: 36.365,
+      longitude: 6.6147,
       channel: 'playground',
       eventType: 'disbursement',
     },
@@ -81,6 +96,8 @@ const SCENARIOS = [
       msisdn: '+99999990504',
       declaredName: 'Samir Touati',
       cell: '16-ALG',
+      latitude: 36.7372,
+      longitude: 3.0865,
       channel: 'playground',
       eventType: 'transfer',
     },
@@ -98,6 +115,8 @@ const SCENARIOS = [
       msisdn: '+213555221100',
       declaredName: 'Nadia Cherif',
       cell: '16-ALG',
+      latitude: 36.7372,
+      longitude: 3.0865,
       channel: 'playground',
       eventType: 'disbursement',
     },
@@ -115,8 +134,28 @@ const SCENARIOS = [
       msisdn: '+213555221100',
       declaredName: 'Nadia Cherif',
       cell: '16-ALG',
+      latitude: 36.7372,
+      longitude: 3.0865,
       channel: 'playground',
       eventType: 'disbursement',
+    },
+  },
+  {
+    id: 'G',
+    label: 'G · Location Retrieval Decides It',
+    tag: 'RETRIEVAL · REJECT',
+    hint: 'Same case as B, plus declared coordinates — the agent buys the handset’s real position and the 351 km gap settles it.',
+    values: {
+      bindingId: 'bb_ecommerce_store_02',
+      amount: 184000,
+      currency: 'DZD',
+      msisdn: '+99999991000',
+      declaredName: 'Yacine Mansouri',
+      cell: '31-ORN',
+      latitude: 35.6971,
+      longitude: -0.6308,
+      channel: 'playground',
+      eventType: 'transfer',
     },
   },
 ]
@@ -221,6 +260,8 @@ export default function Playground() {
   const [msisdn, setMsisdn] = useState(DEFAULTS.msisdn)
   const [declaredName, setDeclaredName] = useState(DEFAULTS.declaredName)
   const [cell, setCell] = useState(DEFAULTS.cell)
+  const [latitude, setLatitude] = useState(DEFAULTS.latitude)
+  const [longitude, setLongitude] = useState(DEFAULTS.longitude)
   const [channel, setChannel] = useState(DEFAULTS.channel)
   const [eventType, setEventType] = useState(DEFAULTS.eventType)
   const [loading, setLoading] = useState(false)
@@ -280,6 +321,8 @@ export default function Playground() {
     setMsisdn(v.msisdn)
     setDeclaredName(v.declaredName)
     setCell(v.cell)
+    setLatitude(v.latitude ?? '')
+    setLongitude(v.longitude ?? '')
     setChannel(v.channel)
     setEventType(v.eventType)
     setActiveScenario(scenario.id)
@@ -294,6 +337,8 @@ export default function Playground() {
     setMsisdn(DEFAULTS.msisdn)
     setDeclaredName(DEFAULTS.declaredName)
     setCell(DEFAULTS.cell)
+    setLatitude(DEFAULTS.latitude)
+    setLongitude(DEFAULTS.longitude)
     setChannel(DEFAULTS.channel)
     setEventType(DEFAULTS.eventType)
     setActiveScenario(null)
@@ -307,7 +352,22 @@ export default function Playground() {
     counterparty: {
       msisdn,
       declared_name: declaredName || undefined,
-      declared_location: cell ? { cell } : undefined,
+      // Coordinates ride along with the cell when supplied — Location
+      // Verification uses them for the live CAMARA area check, and
+      // Location Retrieval measures the device's real position against
+      // them. Blank inputs are omitted rather than sent as NaN.
+      declared_location:
+        cell || latitude !== '' || longitude !== ''
+          ? {
+              ...(cell ? { cell } : {}),
+              ...(latitude !== '' && !Number.isNaN(Number(latitude))
+                ? { latitude: Number(latitude) }
+                : {}),
+              ...(longitude !== '' && !Number.isNaN(Number(longitude))
+                ? { longitude: Number(longitude) }
+                : {}),
+            }
+          : undefined,
     },
     channel,
     idempotency_key: `pg_${Date.now()}`,
@@ -559,6 +619,36 @@ export default function Playground() {
                 </select>
               </label>
             </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1.5">
+                <span className="font-mono text-[11px] tracking-[0.14em] text-ink/55">DECLARED LATITUDE</span>
+                <input
+                  type="number"
+                  step="0.0001"
+                  value={latitude}
+                  onChange={(e) => setLatitude(e.target.value)}
+                  placeholder="optional"
+                  className="rounded-sm border border-ink/20 bg-white/70 px-3.5 py-2.5 font-mono text-sm text-ink outline-none focus:border-rust"
+                />
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="font-mono text-[11px] tracking-[0.14em] text-ink/55">DECLARED LONGITUDE</span>
+                <input
+                  type="number"
+                  step="0.0001"
+                  value={longitude}
+                  onChange={(e) => setLongitude(e.target.value)}
+                  placeholder="optional"
+                  className="rounded-sm border border-ink/20 bg-white/70 px-3.5 py-2.5 font-mono text-sm text-ink outline-none focus:border-rust"
+                />
+              </label>
+            </div>
+            <p className="-mt-1 font-mono text-[10.5px] leading-relaxed text-ink/45">
+              Coordinates are optional. Supplying them lets the agent buy Location Retrieval — the
+              device's actual network position, measured against this point — not just a yes/no
+              check against the declared cell.
+            </p>
 
             <label className="flex flex-col gap-1.5">
               <span className="font-mono text-[11px] tracking-[0.14em] text-ink/55">EVENT / TRANSACTION TYPE</span>

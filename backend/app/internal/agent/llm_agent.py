@@ -2,7 +2,7 @@
 LLM-driven TRUST reasoning agent.
 
 Replaces the fixed if/else decision tree with an OpenRouter chat-completions
-model that is handed the six CAMARA tools as OpenAI-style function
+model that is handed the seven CAMARA tools as OpenAI-style function
 definitions and decides, turn by turn, which signal is worth its cost given
 the remaining budget — the same Observe -> Decide -> Call -> Re-evaluate
 loop, just driven by a model instead of hardcoded branches.
@@ -40,10 +40,11 @@ SIGNAL_WEIGHTS: Dict[str, float] = {
     "check_number_recycling": 0.25,
     "check_sim_swap": 0.35,
     "verify_location": 0.30,
+    "retrieve_location": 0.30,
     "kyc_match": 0.25,
 }
 
-MAX_TOOL_ITERATIONS = 8
+MAX_TOOL_ITERATIONS = 9
 
 
 class LLMTrustAgent:
@@ -95,7 +96,7 @@ class LLMTrustAgent:
         declared_lon = declared_loc.longitude if declared_loc else None
         declared_name = event.counterparty.declared_name or ""
 
-        return {
+        dispatch = {
             "verify_number": (
                 lambda: self.camara.verify_number(msisdn),
                 lambda d: d.get("verified", False),
@@ -116,11 +117,26 @@ class LLMTrustAgent:
                 lambda: self.camara.verify_location(msisdn, declared_cell, declared_lat, declared_lon),
                 lambda d: d.get("match", False),
             ),
+            "retrieve_location": (
+                lambda: self.camara.retrieve_location(msisdn, declared_lat, declared_lon),
+                # A stale or missing fix is never a pass, and without a
+                # declared coordinate to compare against there is nothing
+                # for the position to agree with — so proximity has to be
+                # positively established, not assumed.
+                lambda d: (not d.get("stale", False)) and d.get("within_declared_area", False),
+            ),
             "kyc_match": (
                 lambda: self.camara.kyc_match(msisdn, declared_name),
                 lambda d: d.get("match_score", 0) >= 0.7,
             ),
         }
+        # Without a declared coordinate there is nothing for a retrieved
+        # position to agree with, so the signal could only ever come back
+        # non-passing. Withhold it from the planner entirely rather than
+        # letting the model spend 2 units on an unanswerable question.
+        if declared_lat is None or declared_lon is None:
+            dispatch.pop("retrieve_location")
+        return dispatch
 
     # ------------------------------------------------------------------
     # OpenRouter function-calling schema
@@ -174,6 +190,16 @@ class LLMTrustAgent:
             "Recycling — 1 unit) are good first probes. If those are inconclusive, "
             "or the counterparty is new / the amount is elevated, a SIM Swap check "
             "(2 units) and Location Verification (1 unit) catch account takeover. "
+            "Location Verification only answers yes/no against the coordinate the "
+            "customer declared; Location Retrieval (2 units) instead returns where "
+            "the handset actually is, with an accuracy radius. Prefer verification "
+            "first because it is cheaper — buy retrieval when verification cannot "
+            "settle the question: no coordinate was declared, or verification came "
+            "back negative or uncertain on an elevated amount and the size of the "
+            "discrepancy is what decides the case (a customer one street outside "
+            "the delivery radius and a handset in another region fail verification "
+            "identically). A retrieved position that is stale or missing is not a "
+            "pass. "
             "KYC Match (2 units) is worth its cost mainly for strict-appetite "
             "merchants or when identity misuse is a declared threat. Never spend "
             "more than the remaining budget.\n\n"

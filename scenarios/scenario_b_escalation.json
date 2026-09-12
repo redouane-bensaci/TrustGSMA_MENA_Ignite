@@ -3,7 +3,8 @@
   "title": "Account Takeover via SIM Swap & Geo Mismatch",
   "description": "High value order (184,000 DZD, 91% of balance) to an unfamiliar counterparty. Password was valid, but network detects SIM swap 6-14 hours ago and 412 km distance from home cell. Agent buys high-value signals under budget and holds the transaction.",
   "expected_verdict": "HOLD",
-  "expected_units": 6,
+  "expected_units": 5,
+  "expected_budget": 8,
   "request": {
     "event_type": "high_value_order",
     "amount": { "value": 184000, "currency": "DZD" },

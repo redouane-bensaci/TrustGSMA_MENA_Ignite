@@ -21,8 +21,8 @@ const STAGES = [
   {
     n: '03',
     title: 'Tool Registry',
-    tag: 'Six CAMARA network calls, closed set',
-    text: 'The agent can only call from a fixed registry of six network-standard tools — number verification, device status, SIM swap recency, location match, KYC match, number recycling. Nothing outside this list exists to it. Closed by design, so nothing improvised sneaks into a fraud decision.',
+    tag: 'Seven CAMARA network calls, closed set',
+    text: 'The agent can only call from a fixed registry of seven network-standard tools — number verification, device status, SIM swap recency, location match, location retrieval, KYC match, number recycling. Nothing outside this list exists to it. Closed by design, so nothing improvised sneaks into a fraud decision.',
     detail: '→ /docs/tools',
     href: '/docs/tools',
   },

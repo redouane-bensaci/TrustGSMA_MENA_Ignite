@@ -30,6 +30,19 @@ BINDINGS_DB: Dict[str, BusinessBinding] = {
         declared_threats=["account_takeover", "unauthorized_disbursement"],
         risk_appetite="strict"
     ),
+    # Micro-lending tenant referenced by scenarios/scenario_c_fake_check.json.
+    # Identity misuse is the threat a micro-loan book is actually
+    # underwriting against — a forged onboarding profile is the whole
+    # attack — so this tenant declares it and runs a strict appetite.
+    "bb_microloan_lender_03": BusinessBinding(
+        id="bb_microloan_lender_03",
+        business_name="Sahel Micro-Credit",
+        sector="microfinance_lending",
+        transaction_types=["onboarding_verification", "disbursement"],
+        settlement="cash_disbursement",
+        declared_threats=["identity_misuse", "fake_orders"],
+        risk_appetite="strict"
+    ),
     "bb_ecommerce_store_02": BusinessBinding(
         id="bb_ecommerce_store_02",
         business_name="Atlas Goods E-Commerce",

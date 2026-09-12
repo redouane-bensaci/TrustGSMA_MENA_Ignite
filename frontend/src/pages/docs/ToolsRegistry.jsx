@@ -16,7 +16,7 @@ export default function ToolsRegistry() {
     <div>
       <div className="mb-3 font-mono text-[10px] tracking-[0.24em] text-ink/42">DOCS / TOOL REGISTRY</div>
       <h1 className="m-0 font-display text-[clamp(26px,3.6vw,40px)] font-extrabold tracking-[-0.03em]">
-        The six signals TRUST is allowed to buy.
+        The seven signals TRUST is allowed to buy.
       </h1>
       <p className="mt-3 max-w-[62ch] text-wrap-pretty text-base leading-relaxed text-ink/65">
         The agent's tool registry is closed by design — it can only call from this fixed set of
@@ -31,7 +31,7 @@ export default function ToolsRegistry() {
       ) : null}
 
       <div className="mt-8 flex flex-col gap-3">
-        {(tools || Array.from({ length: 6 })).map((t, i) => (
+        {(tools || Array.from({ length: 7 })).map((t, i) => (
           <div key={t?.id || i} className="rounded border border-ink/16 bg-white/40 p-5">
             {t ? (
               <>

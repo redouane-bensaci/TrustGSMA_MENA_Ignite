@@ -1,13 +1,14 @@
 """
 Nokia Network as Code (NaC) CAMARA API Client Wrappers
-Exposes the 6 official GSMA Open Gateway / CAMARA API tools.
+Exposes the 7 official GSMA Open Gateway / CAMARA API tools.
 
 Real calls go through Nokia's `network_as_code` SDK (RapidAPI-hosted CAMARA
-sandbox). Three signals — SIM Swap, Device Location Verification, and KYC
-Match — have a direct synchronous CAMARA endpoint and are called live
-whenever MOCK_CARRIER_MODE=false and an API key is configured. The other
-three tools (Number Verification, Device Reachability, Number Recycling)
-do not have a simple server-to-server synchronous equivalent in NaC today:
+sandbox). Four signals — SIM Swap, Device Location Verification, Device
+Location Retrieval, and KYC Match — have a direct synchronous CAMARA
+endpoint and are called live whenever MOCK_CARRIER_MODE=false and an API
+key is configured. The other three tools (Number Verification, Device
+Reachability, Number Recycling) do not have a simple server-to-server
+synchronous equivalent in NaC today:
 - Number Verification requires either live cellular data on the caller's
   device (V1) or a full Android Credential Manager / OpenID4VP round trip
   (V2) — neither is reachable from a headless backend.
@@ -21,6 +22,7 @@ never a silent pass — see app.internal.agent for the choke point.
 """
 import asyncio
 import logging
+import math
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 from app.schemas import ToolMetadata
@@ -65,6 +67,15 @@ TOOL_REGISTRY: Dict[str, ToolMetadata] = {
         description="Compares the device's live serving cell tower or network geolocation with a declared transaction coordinate.",
         what_it_proves="Verifies the physical device is in proximity to the delivery or withdrawal location, catching spoofed VPN coordinates."
     ),
+    "retrieve_location": ToolMetadata(
+        id="retrieve_location",
+        name="Device Location Retrieval",
+        camara_standard="camara:location-retrieval:v1",
+        cost_weight=2,
+        latency_profile="~380ms",
+        description="Retrieves the device's last known network-derived position (centre coordinate plus accuracy radius) directly from the operator, rather than asking yes/no about a declared area.",
+        what_it_proves="Establishes where the handset actually is when no coordinate was declared, or when a location verification came back negative and the real distance is what decides the case."
+    ),
     "kyc_match": ToolMetadata(
         id="kyc_match",
         name="Carrier KYC Match",
@@ -104,6 +115,19 @@ def _to_e164(msisdn: str) -> str:
     are sometimes stored without the leading '+' — normalize defensively."""
     m = msisdn.strip()
     return m if m.startswith("+") else f"+{m}"
+
+
+def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Great-circle distance in km between two WGS-84 coordinates. Used to
+    turn a retrieved position into the same kind of `delta_km` the
+    verification signal reports, so both location tools are readable
+    side by side in the merchant UI."""
+    r = 6371.0088
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp = math.radians(lat2 - lat1)
+    dl = math.radians(lon2 - lon1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return round(2 * r * math.asin(math.sqrt(a)), 2)
 
 
 class CamaraClient:
@@ -225,6 +249,46 @@ class CamaraClient:
             "travel_plausible": True
         }
 
+    async def _mock_retrieve_location(self, msisdn: str, max_age_seconds: int = 3600) -> Dict[str, Any]:
+        """
+        Location *retrieval* answers "where is this handset", not "is it
+        inside the area the customer declared" — so the mock returns a
+        concrete coordinate plus the operator's accuracy radius, and lets
+        the caller compute the distance itself. Coordinates are the real
+        centres of the cells our demo personas are written around, so the
+        km deltas the agent reports stay believable on stage.
+        """
+        self._maybe_fail("retrieve_location", msisdn)
+        if "661448899" in msisdn or self.SIM_SWAPPED_NUMBER in msisdn:
+            # Handset is sitting in Algiers while the transaction claims Oran.
+            return {
+                "latitude": 36.7538,
+                "longitude": 3.0588,
+                "accuracy_m": 2000,
+                "serving_cell": "16-ALG",
+                "last_located_at": "4 minutes ago",
+                "age_seconds": 240,
+            }
+        if "770990011" in msisdn:
+            # Dead/recycled line — the operator has no recent fix at all.
+            return {
+                "latitude": None,
+                "longitude": None,
+                "accuracy_m": None,
+                "serving_cell": None,
+                "last_located_at": "> 30 days",
+                "age_seconds": None,
+                "stale": True,
+            }
+        return {
+            "latitude": 36.7372,
+            "longitude": 3.0865,
+            "accuracy_m": 1200,
+            "serving_cell": "16-ALG",
+            "last_located_at": "1 minute ago",
+            "age_seconds": 60,
+        }
+
     async def _mock_kyc_match(self, msisdn: str, declared_name: str) -> Dict[str, Any]:
         self._maybe_fail("kyc_match", msisdn)
         if "770990011" in msisdn or self.SIM_SWAPPED_NUMBER in msisdn or self.KYC_MISMATCH_ONLY_NUMBER in msisdn:
@@ -322,6 +386,84 @@ class CamaraClient:
             }
         except Exception as exc:
             raise CamaraUnavailableError("verify_location", str(exc))
+
+    async def retrieve_location(
+        self,
+        msisdn: str,
+        declared_latitude: Optional[float] = None,
+        declared_longitude: Optional[float] = None,
+        max_age_seconds: int = 3600,
+    ) -> Dict[str, Any]:
+        """
+        CAMARA Location Retrieval — asks the operator where the handset
+        actually is, instead of asking whether it is inside a declared
+        area (that is `verify_location`). Worth its 2 units precisely when
+        verification cannot answer: no coordinate was declared, or
+        verification came back negative and the *size* of the discrepancy
+        is what decides between a customer one street over and a handset
+        in another wilaya.
+
+        When declared coordinates are supplied the great-circle distance is
+        returned as `delta_km` alongside the raw position, so the same
+        field the verification signal reports stays comparable. A position
+        older than `max_age_seconds`, or no position at all, is reported
+        with `stale: True` rather than passed off as a current fix.
+        """
+        if self._use_mock_for(msisdn):
+            details = await self._mock_retrieve_location(msisdn, max_age_seconds)
+        else:
+            try:
+                phone = _to_e164(msisdn)
+                result = await asyncio.to_thread(
+                    self._sdk_client.location.get_location,
+                    device={"phone_number": phone},
+                    max_age=max_age_seconds,
+                )
+                area = getattr(result, "area", None) or getattr(result, "location", None)
+                center = getattr(area, "center", None)
+                latitude = getattr(center, "latitude", None) if center else None
+                longitude = getattr(center, "longitude", None) if center else None
+                radius = getattr(area, "radius", None)
+                located_at = getattr(result, "last_location_time", None)
+                age_seconds = None
+                if located_at is not None:
+                    try:
+                        age_seconds = round(
+                            (datetime.now(timezone.utc) - located_at).total_seconds()
+                        )
+                    except TypeError:
+                        age_seconds = None
+                details = {
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "accuracy_m": radius,
+                    "serving_cell": None,
+                    "last_located_at": located_at.isoformat() if hasattr(located_at, "isoformat") else located_at,
+                    "age_seconds": age_seconds,
+                }
+            except Exception as exc:
+                raise CamaraUnavailableError("retrieve_location", str(exc))
+
+        lat, lon = details.get("latitude"), details.get("longitude")
+        age = details.get("age_seconds")
+        # No fix at all, or a fix too old to speak to *this* transaction,
+        # is reported as stale — the agent must not read it as a match.
+        details["stale"] = bool(
+            details.get("stale") or lat is None or lon is None
+            or (age is not None and age > max_age_seconds)
+        )
+        if (
+            not details["stale"]
+            and declared_latitude is not None
+            and declared_longitude is not None
+        ):
+            delta = haversine_km(lat, lon, declared_latitude, declared_longitude)
+            details["delta_km"] = delta
+            # Inside the operator's own accuracy radius counts as proximate —
+            # anything beyond that plus a 5 km tolerance is a real gap.
+            tolerance_km = 5.0 + ((details.get("accuracy_m") or 0) / 1000.0)
+            details["within_declared_area"] = delta <= tolerance_km
+        return details
 
     async def kyc_match(self, msisdn: str, declared_name: str) -> Dict[str, Any]:
         if self._use_mock_for(msisdn):

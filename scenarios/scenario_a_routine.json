@@ -3,7 +3,8 @@
   "title": "Routine Payroll Payment",
   "description": "Routine monthly employee payment to a known account seen monthly since March 2024. Low exposure, clears cheaply on 2 cost units.",
   "expected_verdict": "APPROVE",
-  "expected_units": 2,
+  "expected_units": 4,
+  "expected_budget": 5,
   "request": {
     "event_type": "payroll_transfer",
     "amount": { "value": 42000, "currency": "DZD" },
