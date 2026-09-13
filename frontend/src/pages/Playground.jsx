@@ -158,6 +158,24 @@ const SCENARIOS = [
       eventType: 'transfer',
     },
   },
+  {
+    id: 'H',
+    label: 'H · Computer User / No SIM',
+    tag: 'NO SIM · HOLD',
+    hint: 'Reserved number +00000000000 — no SIM to test, so it is held by default with zero units spent.',
+    values: {
+      bindingId: 'bb_default_retail',
+      amount: 12000,
+      currency: 'DZD',
+      msisdn: '+00000000000',
+      declaredName: 'Desktop Customer',
+      cell: '',
+      latitude: '',
+      longitude: '',
+      channel: 'playground',
+      eventType: 'order_placement',
+    },
+  },
 ]
 
 function loadHistory() {

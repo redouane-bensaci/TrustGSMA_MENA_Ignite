@@ -12,6 +12,7 @@ from app.internal.history.ledger import lookup_counterparty
 from app.internal.agent.reason import TrustAgent
 from app.internal.agent.llm_agent import LLMTrustAgent
 from app.internal.agent.explain import generate_explanation
+from app.internal.verdict.synthesize import is_no_sim_counterparty, no_sim_hold_verdict
 from app.api.v1.business_bindings import get_binding_by_id
 from app.config import settings
 
@@ -74,11 +75,19 @@ async def verify_transaction(event: TransactionEvent, background_tasks: Backgrou
     # Anti-tampering: ledger lookup is performed server-side, never trusted from client
     history = lookup_counterparty(event.counterparty.msisdn)
 
+    # No SIM to test (computer / no-SIM user): skip the agent entirely — no
+    # CAMARA call can run — and hold by default. The fixed template is kept
+    # as-is rather than rewritten by the explanation layer.
+    no_sim = is_no_sim_counterparty(event.counterparty.msisdn)
+    if no_sim:
+        logger.info("Counterparty has no SIM card, holding by default without CAMARA checks")
+        machine_verdict, merchant_instruction = no_sim_hold_verdict()
+
     # Run the bounded agent reasoning loop. The LLM planner (OpenRouter)
     # decides which CAMARA signals to buy; if it's disabled or errors out
     # before spending anything, fall back to the fixed decision tree so a
     # verify call never hard-fails on an LLM-provider outage.
-    if settings.LLM_AGENT_ENABLED and settings.OPENROUTER_API_KEY:
+    elif settings.LLM_AGENT_ENABLED and settings.OPENROUTER_API_KEY:
         try:
             logger.info("Running autonomous LLM agent reasoning loop via OpenRouter...")
             machine_verdict, merchant_instruction = await llm_agent.execute_reasoning_loop(
@@ -99,7 +108,7 @@ async def verify_transaction(event: TransactionEvent, background_tasks: Backgrou
     # language note for the business owner — never touches decision/score,
     # only replaces the templated summary/action text when the LLM is
     # available. Any failure here silently keeps the deterministic template.
-    explanation = await generate_explanation(
+    explanation = None if no_sim else await generate_explanation(
         decision=machine_verdict.decision,
         score=machine_verdict.score,
         confidence=machine_verdict.confidence,

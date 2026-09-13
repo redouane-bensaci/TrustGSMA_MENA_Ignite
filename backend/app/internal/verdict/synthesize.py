@@ -17,6 +17,46 @@ MODERATE_THRESHOLDS = {"approve": 80, "review": 45, "hold": 20}
 LENIENT_THRESHOLDS = {"approve": 40, "review": 25, "hold": 10}
 
 
+# Reserved MSISDN a caller sends when the counterparty has no SIM to test —
+# a desktop/web user, or a customer who never provided a mobile number.
+# Every CAMARA API keys off a live SIM, so there is no evidence to buy; the
+# transaction is held by default instead of scored on nothing.
+NO_SIM_MSISDN = "+00000000000"
+
+
+def is_no_sim_counterparty(msisdn: str) -> bool:
+    clean = (msisdn or "").replace(" ", "").replace("-", "")
+    return clean in ("", NO_SIM_MSISDN)
+
+
+def no_sim_hold_verdict(budget_allocated: int = 0) -> Tuple[MachineVerdict, MerchantInstruction]:
+    """HOLD verdict for a counterparty with no SIM — no CAMARA units spent."""
+    verdict = MachineVerdict(
+        decision="HOLD",
+        score=0,
+        confidence="low",
+        signals=[
+            SignalResult(
+                name="no_sim_counterparty",
+                status="not_applicable",
+                weight=0.0,
+                cost_units=0,
+                details={"reason": "No SIM card provided (computer or no-SIM user); network checks cannot run."},
+            )
+        ],
+        cost_units_spent=0,
+        budget_allocated=budget_allocated,
+        latency_ms=0,
+        override_rule_fired="RULE_0: No SIM card to verify - held by default",
+    )
+    instruction = MerchantInstruction(
+        summary="No SIM card was provided, so no mobile network checks could be run on this customer.",
+        recommended_action="Hold the transaction and verify the customer through another channel (ID check, call-back, or in-person confirmation).",
+        headline_badge="HOLD · NO SIM TO VERIFY",
+    )
+    return verdict, instruction
+
+
 def _decision_thresholds(binding: BusinessBinding, amount_value: float) -> dict:
     appetite = binding.risk_appetite
     if appetite == "strict":
